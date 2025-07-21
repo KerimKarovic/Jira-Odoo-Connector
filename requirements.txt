@@ -1,0 +1,5 @@
+requests
+python-dotenv
+schedule
+pywin32; platform_system == "Windows"
+

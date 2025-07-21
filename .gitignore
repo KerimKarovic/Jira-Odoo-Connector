@@ -1,0 +1,28 @@
+# Environment variables
+.env
+
+# Virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+logs/
+sync_log.json
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug files (cleanup)
+debug_*.py
+test_*.py
+verify_*.py
