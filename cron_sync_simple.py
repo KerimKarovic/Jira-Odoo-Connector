@@ -9,7 +9,7 @@ import os
 import logging
 from datetime import datetime
 from main import main
-from utils import setup_logging, validate_config
+from utils import validate_config
 
 def run_cron_sync():
     """
@@ -35,7 +35,7 @@ def run_cron_sync():
     )
     
     # Log start of sync
-    logging.info("[START] Starting JIRA-Odoo sync via cron job")
+    logging.info("Starting JIRA-Odoo sync via cron job")
     
     try:
         # Validate configuration
@@ -43,7 +43,7 @@ def run_cron_sync():
         
         # Record start time
         start_time = datetime.now()
-        logging.info(f"[TIME] Sync started at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        logging.info(f"Sync started at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
         
         # Run the main sync process
         main()
@@ -51,15 +51,15 @@ def run_cron_sync():
         # Calculate duration
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
-        logging.info(f"[SUCCESS] Sync completed in {duration:.2f} seconds")
+        logging.info(f"Sync completed in {duration:.2f} seconds")
         
         return True
         
     except Exception as e:
-        logging.error(f"[ERROR] Cron sync failed: {e}")
+        logging.error(f"Cron sync failed: {e}")
         return False
     finally:
-        logging.info("[END] Cron job execution completed")
+        logging.info("Cron job execution completed")
 
 if __name__ == "__main__":
     # Run the sync

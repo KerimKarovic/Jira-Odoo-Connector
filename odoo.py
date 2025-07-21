@@ -1,7 +1,7 @@
 
 import xmlrpc.client
 from datetime import datetime, date
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional
 from utils import config
 
 # ========== CONFIG VALUES ==========
@@ -9,7 +9,6 @@ ODOO_URL = config["odoo"]["url"].rstrip('/')  # Remove trailing slash
 ODOO_DB = config["odoo"]["db"]
 ODOO_USERNAME = config["odoo"]["username"]
 ODOO_PASSWORD = config["odoo"]["password"]
-LOOKBACK_HOURS = config["sync"]["lookback_hours"]
 
 # WebDevelopment Team Employee ID
 WEBDEV_TEAM_EMPLOYEE_ID = 21
@@ -39,66 +38,6 @@ def get_odoo_connection():
         print(f"❌ Error connecting to Odoo: {e}")
         return None, None, None
 
-# ========== FETCH TASKS ==========
-def get_recent_tasks():
-    """
-    Fetch recent tasks from Odoo that have JIRA references.
-    Returns: list of task dictionaries
-    """
-    common, models, uid = get_odoo_connection()
-    if not uid or not models:
-        return []
-    
-    try:
-        jira_field = 'x_studio_jira_issue_1'
-        
-        print(f"\n🔍 Using field: {jira_field}")
-        
-        # Get all tasks with JIRA references
-        print("\n🔍 Searching for tasks with JIRA references...")
-        all_task_ids = models.execute_kw(
-            ODOO_DB, uid, ODOO_PASSWORD,
-            'project.task', 'search',
-            [[]],
-            {'limit': 200}
-        )
-        
-        if all_task_ids and isinstance(all_task_ids, list):
-            all_tasks = models.execute_kw(
-                ODOO_DB, uid, ODOO_PASSWORD,
-                'project.task', 'read',
-                [all_task_ids],
-                {'fields': ['id', 'name', jira_field, 'project_id']}
-            )
-            
-            # Filter tasks with JIRA references
-            tasks_with_jira = []
-            if isinstance(all_tasks, list):
-                for task in all_tasks:
-                    if isinstance(task, dict):
-                        jira_value = task.get(jira_field, '')
-                        if jira_value and jira_value != False:
-                            tasks_with_jira.append(task)
-            
-            # Show results
-            print(f"\n✅ Found {len(tasks_with_jira)} tasks with JIRA references")
-            for task in tasks_with_jira[:5]:
-                if isinstance(task, dict):
-                    jira_value = task.get(jira_field, '')
-                    task_name = task.get('name', '')
-                    if isinstance(task_name, str):
-                        task_name = task_name[:50] + "..." if len(task_name) > 50 else task_name
-                    print(f"   - Task {task.get('id')}: {task_name} | JIRA: {jira_value}")
-            
-            return tasks_with_jira
-        else:
-            print("⚠️ No tasks found")
-            return []
-        
-    except Exception as e:
-        print(f"❌ Error fetching tasks: {e}")
-        return []
-
 # ========== CREATE TIMESHEET ENTRY ==========
 def create_timesheet_entry(task_id: int, hours: float, description: str, work_date: Optional[str] = None, jira_author: Optional[str] = None, tempo_worklog_id: Optional[str] = None) -> Optional[int]:
     """
@@ -119,32 +58,21 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
     if work_date is None:
         work_date = date.today().strftime('%Y-%m-%d')
     
-    # Include JIRA author in description if provided
-    if jira_author:
-        enhanced_description = f"{description} (by {jira_author})"
-    else:
-        enhanced_description = description
-    
     try:
-        # Get task info to ensure it exists and get project
-        task_info = models.execute_kw(
+        # Get task details
+        task_data = models.execute_kw(
             ODOO_DB, uid, ODOO_PASSWORD,
             'project.task', 'read',
-            [task_id],
+            [[int(task_id)]],
             {'fields': ['name', 'project_id']}
         )
         
-        if not task_info or not isinstance(task_info, list) or len(task_info) == 0:
-            print(f"❌ Task {task_id} not found")
-            return None
-        
-        task_data = task_info[0]
-        if not isinstance(task_data, dict):
-            print(f"❌ Invalid task data for {task_id}")
+        if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
+            print(f"❌ Task {task_id} not found in Odoo")
             return None
             
-        task_name = task_data.get('name', 'Unknown Task')
-        project_id_field = task_data.get('project_id')
+        task_name = task_data[0].get('name', 'Unknown Task')
+        project_id_field = task_data[0].get('project_id')
         
         # Handle project_id which can be False, int, or [id, name] tuple
         project_id = None
@@ -152,6 +80,11 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
             project_id = project_id_field[0]
         elif isinstance(project_id_field, int):
             project_id = project_id_field
+        
+        # Enhanced description with JIRA author if provided
+        enhanced_description = description
+        if jira_author and jira_author != 'Unknown':
+            enhanced_description = f"{description} (by {jira_author})"
         
         # Timesheet data using WebDevelopment Team employee
         timesheet_data = {
@@ -225,6 +158,30 @@ def test_odoo_connection():
     else:
         print("❌ Odoo connection failed")
         return False
+
+def get_recent_tasks(limit=10):
+    """
+    Get recent tasks from Odoo with JIRA URLs
+    Returns: List of task dictionaries
+    """
+    common, models, uid = get_odoo_connection()
+    if not uid or not models:
+        return []
+    
+    try:
+        # Search for tasks with JIRA URLs
+        tasks = models.execute_kw(
+            ODOO_DB, uid, ODOO_PASSWORD,
+            'project.task', 'search_read',
+            [[('x_studio_jira_url', '!=', False)]],
+            {'fields': ['id', 'name', 'x_studio_jira_url'], 'limit': limit, 'order': 'id desc'}
+        )
+        
+        return tasks
+        
+    except Exception as e:
+        print(f"❌ Error fetching tasks: {e}")
+        return []
 
 
 

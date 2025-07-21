@@ -13,21 +13,7 @@ headers = {
     "Content-Type": "application/json"
 }
 
-def get_issue_details(issue_key):
-    """
-    Get full issue details including custom fields
-    Args:
-        issue_key: JIRA issue key (e.g., 'KDW-1384')
-    Returns: Issue data dictionary or None
-    """
-    try:
-        issue_url = f"{JIRA_URL}/rest/api/3/issue/{issue_key}"
-        response = requests.get(issue_url, headers=headers, auth=auth)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        print(f"❌ Error fetching issue {issue_key}: {e}")
-        return None
+
 
 def get_issue_with_odoo_url(issue_key):
     """

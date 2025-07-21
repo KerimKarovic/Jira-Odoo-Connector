@@ -1,5 +1,5 @@
-requests
-python-dotenv
-schedule
-pywin32; platform_system == "Windows"
+requests>=2.31.0
+python-dotenv>=1.0.0
+pytest>=7.0.0
+pywin32>=306; platform_system == "Windows"
 

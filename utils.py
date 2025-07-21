@@ -1,39 +1,10 @@
 import os
 import logging
-import json
 from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env
 load_dotenv()
-
-def setup_logging():
-    """Configure logging for the application"""
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler('sync.log'),
-            logging.StreamHandler()
-        ]
-    )
-
-def log_sync_result(jira_key, odoo_task_id, hours, status, error=None):
-    """Log sync results to JSON file"""
-    log_entry = {
-        'timestamp': datetime.now().isoformat(),
-        'jira_key': jira_key,
-        'odoo_task_id': odoo_task_id,
-        'hours': hours,
-        'status': status,
-        'error': error
-    }
-    
-    try:
-        with open('sync_log.json', 'a') as f:
-            f.write(json.dumps(log_entry) + '\n')
-    except Exception as e:
-        print(f"❌ Error logging: {e}")
 
 # ========== ENVIRONMENT VARIABLES ==========
 JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
@@ -80,6 +51,26 @@ def validate_config():
     missing = [var for var in required_vars if not os.getenv(var)]
     if missing:
         raise EnvironmentError(f"Missing environment variables: {', '.join(missing)}")
+
+def setup_logging(log_file=None):
+    """Configure logging for the application"""
+    # Create logs directory if it doesn't exist
+    if not os.path.exists("logs"):
+        os.makedirs("logs")
+    
+    # Use provided log file or default
+    if not log_file:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file = f"logs/sync_{timestamp}.log"
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file, encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
 
 # Call validation on import
 validate_config()
