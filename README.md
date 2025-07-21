@@ -29,10 +29,6 @@ This project synchronizes worklogs(timesheets) from tempo(JIRA) into Odoo, allow
 ├── utils.py                  # Configuration, logging, and helpers
 ├── scheduler.py              # Scheduled runs using APScheduler
 ├── test_sync.py              # 27 Pytest-based unit tests
-├── Dockerfile.prod           # Dockerfile for production
-├── docker-compose.dev.yml    # Docker setup for development
-├── docker-compose.prod.yml   # Docker setup for production
-├── deploy.sh                 # Deployment script (bash)
 ├── requirements.txt          # Python dependencies
 ├── .env.template             # Template for .env config
 └── README.md                 # This file
@@ -50,12 +46,12 @@ This project synchronizes worklogs(timesheets) from tempo(JIRA) into Odoo, allow
 
 🔧 Setup Instructions
 
-1.Clone the respiratory
+1.Clone the repository
 
 git clone https://github.com/your-org/jira-odoo-sync.git
 cd jira-odoo-sync
 
-2. Create a .env file 
+1. Create a .env file 
  dp .env.template .env
 
 Update values like :
@@ -81,15 +77,7 @@ python main.py --test # Test connections
 python main.py # Run sync once
 python scheduler.py 30 # Run sync every 30 minutes
 
-🐳 Docker Usage
-   Buid and run for deployment:
-   docker-compose -f docker-compose.dev.yml up --build
 
-   Build and run for produciton:
-   docker -compose -f docker-compose.prod.yml up --build -d
-
-   Deployment
-   ./deploy.sh
 
 📌 Troubleshooting
 -If test_sync.py fails on mock or argument issues, check return mocks and hardcoded values like uid=21.
@@ -97,3 +85,40 @@ python scheduler.py 30 # Run sync every 30 minutes
 -If Tempo returns 410 GONE, you're likely using an old API version. Switch to https://api.tempo.io/4/worklogs.
 
 -Make sure custom fields (x_jira_worklog_id) exist in Odoo.
+
+## Automated Deployment
+
+### Cron Job Setup
+
+For automated syncing, you can set up a cron job to run the sync at regular intervals:
+
+1. Use the `cron_sync.py` script for automated runs
+2. Set up a cron job to run this script at your desired frequency
+3. See `CRON_SETUP.md` for detailed instructions for different platforms
+
+Example cron job (runs every hour):
+```
+0 * * * * cd /path/to/jira-odoo-sync && /path/to/python cron_sync.py
+```
+
+### Docker Deployment
+
+For containerized deployment:
+
+1. Build the Docker image:
+   ```
+   docker build -t jira-odoo-sync .
+   ```
+
+2. Run the container:
+   ```
+   docker run -d --name jira-odoo-sync \
+     -v $(pwd)/logs:/app/logs \
+     -v $(pwd)/.env:/app/.env \
+     jira-odoo-sync
+   ```
+
+3. Check logs:
+   ```
+   docker logs jira-odoo-sync
+   ```

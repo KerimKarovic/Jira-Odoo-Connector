@@ -1,6 +1,8 @@
 import requests
 import datetime
 from utils import config
+from jira import get_issue_with_odoo_url
+
 
 # ========== TEMPO CONFIG ==========
 TEMPO_BASE_URL = "https://api.tempo.io/4"
@@ -84,6 +86,11 @@ def enrich_timesheet_with_issue_key(timesheet):
         issue = timesheet.get('issue', {})
         issue_id = issue.get('id')
         
+        # If issue already has a key, we can skip the API call
+        if issue.get('key'):
+            enriched_timesheet = timesheet.copy()
+            return enriched_timesheet
+            
         if not issue_id:
             print("⚠️ No issue ID found in timesheet")
             return None
@@ -120,6 +127,7 @@ def enrich_timesheet_with_issue_key(timesheet):
     except Exception as e:
         print(f"⚠️ Error enriching timesheet: {e}")
         return timesheet  # Return original if enrichment fails
+
 
 
 
