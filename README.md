@@ -52,7 +52,7 @@ This project synchronizes worklogs(timesheets) from tempo(JIRA) into Odoo, allow
 
 1.Clone the respiratory
 
-git clone https://github.com/your-org/jira-odoo-sync.git
+git clone https://github.com/KerimKarovic/Jira-Odoo-Connector.git
 cd jira-odoo-sync
 
 2. Create a .env file 
