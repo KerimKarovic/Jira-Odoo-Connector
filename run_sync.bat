@@ -32,3 +32,6 @@ if exist "venv\Scripts\activate.bat" (
     deactivate
 )
 
+:: Keep window open for debugging (remove for production)
+:: pause
+

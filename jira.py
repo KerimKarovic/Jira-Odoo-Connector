@@ -1,3 +1,8 @@
+"""
+JIRA API integration
+Handles fetching JIRA issues and extracting Odoo URLs with Epic hierarchy support
+"""
+
 import requests
 from utils import config
 

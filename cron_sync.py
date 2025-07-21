@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-JIRA to Odoo Timesheet Sync - Cron Job Script
+JIRA to Odoo Timesheet Sync - Cron Job Script (Linux/Unix)
 This script is designed to be run as a cron job to automate the sync process.
 """
 
@@ -9,7 +9,7 @@ import os
 import logging
 from datetime import datetime
 from main import main
-from utils import setup_logging, validate_config
+from utils import validate_config, setup_logging
 
 def run_cron_sync():
     """
@@ -23,29 +23,18 @@ def run_cron_sync():
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     
-    # Configure logging with UTF-8 encoding for file handler
+    # Configure logging for Unix systems
     log_file = f"{log_dir}/sync_{timestamp}.log"
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - CRON - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file, encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
     
-    # Create file handler with UTF-8 encoding
-    file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    file_handler.setLevel(logging.INFO)
-    
-    # Create console handler with UTF-8 encoding (fallback to ASCII for Windows)
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    
-    # Create formatter
-    formatter = logging.Formatter('%(asctime)s - CRON - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-    
-    # Configure root logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-    
-    # Log start of sync (using simple text for Windows compatibility)
+    # Log start of sync
     logging.info("Starting JIRA-Odoo sync via cron job")
     
     try:
@@ -73,7 +62,7 @@ def run_cron_sync():
         logging.info("Cron job execution completed")
 
 if __name__ == "__main__":
-    # Set UTF-8 encoding for stdout on Windows
+    # Set UTF-8 encoding for stdout on Windows (if needed)
     if sys.platform.startswith('win'):
         import codecs
         sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')

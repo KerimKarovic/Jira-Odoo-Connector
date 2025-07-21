@@ -1,4 +1,9 @@
 
+"""
+Odoo integration
+Handles connection to Odoo and timesheet creation
+"""
+
 import xmlrpc.client
 from datetime import datetime, date
 from typing import Optional
@@ -13,7 +18,6 @@ ODOO_PASSWORD = config["odoo"]["password"]
 # WebDevelopment Team Employee ID
 WEBDEV_TEAM_EMPLOYEE_ID = 21
 
-# ========== ODOO CONNECTION ==========
 def get_odoo_connection():
     """
     Establish connection to Odoo using XML-RPC.
@@ -38,7 +42,6 @@ def get_odoo_connection():
         print(f"❌ Error connecting to Odoo: {e}")
         return None, None, None
 
-# ========== CREATE TIMESHEET ENTRY ==========
 def create_timesheet_entry(task_id: int, hours: float, description: str, work_date: Optional[str] = None, jira_author: Optional[str] = None, tempo_worklog_id: Optional[str] = None) -> Optional[int]:
     """
     Create a timesheet entry in Odoo.
@@ -182,8 +185,6 @@ def get_recent_tasks(limit=10):
     except Exception as e:
         print(f"❌ Error fetching tasks: {e}")
         return []
-
-
 
 # ========== DEMO RUN ==========
 if __name__ == "__main__":

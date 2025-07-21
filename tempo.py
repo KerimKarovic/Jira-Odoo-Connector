@@ -1,3 +1,8 @@
+"""
+Tempo API integration
+Handles fetching worklogs from Tempo and enriching them with JIRA data
+"""
+
 import requests
 import datetime
 from utils import config

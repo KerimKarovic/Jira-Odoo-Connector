@@ -1,3 +1,8 @@
+"""
+Utility functions and configuration management
+Handles environment variables, logging, and validation
+"""
+
 import os
 import logging
 from datetime import datetime
