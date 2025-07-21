@@ -14,13 +14,13 @@ headers = {
     "Content-Type": "application/json"
 }
 
-def get_tempo_timesheets():
+def get_tempo_worklogs():
     """
-    Fetch recent timesheets from Tempo API
-    Returns: list of timesheet dictionaries with issue data
+    Fetch recent worklogs from Tempo API for ALL USERS
+    Returns: list of worklog dictionaries with issue data
     """
     try:
-        print("🔍 Fetching timesheets from Tempo...")
+        print("🔍 Fetching worklogs from Tempo (ALL USERS)...")
         
         # Calculate date range
         end_date = datetime.datetime.now()
@@ -28,7 +28,7 @@ def get_tempo_timesheets():
         
         print(f"📅 Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         
-        # Tempo API endpoint for timesheets
+        # Tempo API endpoint for worklogs
         url = f"{TEMPO_BASE_URL}/worklogs"
         
         params = {
@@ -37,38 +37,34 @@ def get_tempo_timesheets():
             'limit': 1000
         }
         
+        print(f"🔗 Tempo API URL: {url}")
+        print(f"📋 Parameters: {params}")
+        print(f"🔑 Using token: {TEMPO_API_TOKEN[:10]}...")
+        
         response = requests.get(url, headers=headers, params=params)
+        
+        if response.status_code == 401:
+            print(f"❌ Tempo API 401 Unauthorized - Check your API token!")
+            print(f"🔑 Current token starts with: {TEMPO_API_TOKEN[:10]}...")
+            print(f"📋 Make sure token has 'View worklogs' permission")
+            return []
+        
         response.raise_for_status()
         
         data = response.json()
-        timesheets = data.get('results', [])
+        worklogs = data.get('results', [])
         
-        print(f"✅ Found {len(timesheets)} timesheets from Tempo")
-        
-        # Enrich timesheets with JIRA issue keys
-        enriched_timesheets = []
-        for timesheet in timesheets:
-            enriched = enrich_timesheet_with_issue_key(timesheet)
-            if enriched:
-                enriched_timesheets.append(enriched)
-        
-        # Show sample data
-        if enriched_timesheets:
-            print(f"\n📋 Sample timesheets:")
-            for i, timesheet in enumerate(enriched_timesheets[:3]):
-                issue_key = timesheet.get('issue', {}).get('key', 'Unknown')
-                hours = timesheet.get('timeSpentSeconds', 0) / 3600
-                author = timesheet.get('author', {}).get('displayName', 'Unknown')
-                print(f"  {i+1}. {issue_key} | {author} | {hours:.2f}h")
-        
-        return enriched_timesheets
+        print(f"✅ Found {len(worklogs)} worklogs from Tempo (all users)")
+        return worklogs
         
     except requests.exceptions.RequestException as e:
-        print(f"❌ Error fetching Tempo timesheets: {e}")
+        print(f"❌ Error fetching Tempo worklogs: {e}")
         return []
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print(f"❌ Unexpected error fetching Tempo worklogs: {e}")
         return []
+
+
 
 def enrich_timesheet_with_issue_key(timesheet):
     """

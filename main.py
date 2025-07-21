@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 
 # Import our modules
-from tempo import get_tempo_timesheets
+from tempo import get_tempo_worklogs
 from jira import get_issue_with_odoo_url, extract_odoo_task_id_from_url
 from odoo import create_timesheet_entry, check_existing_timesheet_by_worklog_id, test_odoo_connection
 
@@ -19,7 +19,10 @@ def convert_seconds_to_hours(seconds):
 
 def sync_tempo_timesheet_to_odoo(timesheet):
     """
-    Sync Tempo timesheet to Odoo using direct Odoo URL from JIRA issue
+    Sync Tempo timesheet to Odoo using hierarchy logic:
+    1. Use direct Odoo URL from work item
+    2. Use Odoo URL from parent Epic if no direct URL
+    3. Skip if neither has Odoo URL
     """
     try:
         # Get Tempo worklog ID for duplicate detection
@@ -40,10 +43,10 @@ def sync_tempo_timesheet_to_odoo(timesheet):
         
         print(f"🔄 Processing timesheet for {jira_key}")
         
-        # Get issue details with Odoo URL
+        # Get issue details with Odoo URL (checks hierarchy)
         issue_data = get_issue_with_odoo_url(jira_key)
         if not issue_data or not issue_data.get('odoo_url'):
-            print(f"⚠️ No Odoo URL found for {jira_key}")
+            print(f"⚠️ No Odoo URL found for {jira_key} or its Epic - SKIPPING")
             return False
         
         # Extract Odoo task ID from URL
@@ -52,16 +55,20 @@ def sync_tempo_timesheet_to_odoo(timesheet):
             print(f"❌ Could not extract task ID from URL: {issue_data['odoo_url']}")
             return False
         
-        print(f"🎯 Found Odoo task ID: {odoo_task_id}")
+        # Show task source
+        task_source = issue_data.get('task_source', 'unknown')
+        if task_source == 'epic':
+            epic_key = issue_data.get('epic_key', 'Unknown')
+            print(f"🎯 Found Odoo task ID: {odoo_task_id} (via Epic {epic_key})")
+        else:
+            print(f"🎯 Found Odoo task ID: {odoo_task_id} (direct)")
         
         # Extract timesheet details
         time_seconds = timesheet.get('timeSpentSeconds', 0)
         hours = convert_seconds_to_hours(time_seconds)
         
-        # Get description from timesheet
-        description = timesheet.get('description', '')
-        if not description or description.strip() == '':
-            description = f'Work on {jira_key}'
+        # Use issue title as description (not worklog description)
+        description = issue_data.get('description', f'Work on {jira_key}')
         
         # Get date
         started_date = timesheet.get('startDate', '')
@@ -72,7 +79,7 @@ def sync_tempo_timesheet_to_odoo(timesheet):
         author_name = author.get('displayName', 'Unknown')
         
         print(f"⏱️ Time to log: {hours} hours")
-        print(f"📝 Description: '{description}'")
+        print(f"📝 Description: '{description}' (from {jira_key} title)")
         print(f"👤 Author: {author_name}")
         print(f"📅 Date: {date}")
         if tempo_worklog_id:
@@ -84,7 +91,8 @@ def sync_tempo_timesheet_to_odoo(timesheet):
         )
         
         if timesheet_id:
-            print(f"✅ Successfully synced {jira_key} → Task {odoo_task_id} ({hours}h)")
+            source_info = f"via Epic {issue_data.get('epic_key')}" if task_source == 'epic' else "direct"
+            print(f"✅ Successfully synced {jira_key} → Task {odoo_task_id} ({hours}h) [{source_info}]")
             return True
         else:
             print(f"❌ Failed to create timesheet for {jira_key}")
@@ -102,7 +110,7 @@ def main():
     try:
         # Step 1: Fetch Tempo timesheets
         print("\n📥 Fetching recent timesheets from Tempo...")
-        tempo_timesheets = get_tempo_timesheets()
+        tempo_timesheets = get_tempo_worklogs()
         
         if not tempo_timesheets:
             print("⚠️ No Tempo timesheets found.")
@@ -138,9 +146,9 @@ def test_connections():
     test_odoo_connection()
     
     # Test Tempo
-    timesheets = get_tempo_timesheets()
-    if timesheets is not None:
-        print(f"✅ Tempo connection successful ({len(timesheets)} timesheets)")
+    worklogs = get_tempo_worklogs()
+    if worklogs is not None and len(worklogs) >= 0:
+        print(f"✅ Tempo connection successful ({len(worklogs)} worklogs)")
     else:
         print("❌ Tempo connection failed")
 
