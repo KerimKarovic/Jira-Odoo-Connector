@@ -170,7 +170,7 @@ def get_recent_tasks(limit=10):
     common, models, uid = get_odoo_connection()
     if not uid or not models:
         return []
-    
+
     try:
         # Search for tasks with JIRA URLs
         tasks = models.execute_kw(
@@ -179,9 +179,14 @@ def get_recent_tasks(limit=10):
             [[('x_studio_jira_url', '!=', False)]],
             {'fields': ['id', 'name', 'x_studio_jira_url'], 'limit': limit, 'order': 'id desc'}
         )
-        
-        return tasks
-        
+
+        # Ensure we always return a list
+        if isinstance(tasks, list):
+            return tasks
+        else:
+            print(f"⚠️ Unexpected return type from Odoo API: {type(tasks)}")
+            return []
+
     except Exception as e:
         print(f"❌ Error fetching tasks: {e}")
         return []
