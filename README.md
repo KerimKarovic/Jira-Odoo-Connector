@@ -29,10 +29,6 @@ This project synchronizes worklogs(timesheets) from tempo(JIRA) into Odoo, allow
 ├── utils.py                  # Configuration, logging, and helpers
 ├── scheduler.py              # Scheduled runs using APScheduler
 ├── test_sync.py              # 27 Pytest-based unit tests
-├── Dockerfile.prod           # Dockerfile for production
-├── docker-compose.dev.yml    # Docker setup for development
-├── docker-compose.prod.yml   # Docker setup for production
-├── deploy.sh                 # Deployment script (bash)
 ├── requirements.txt          # Python dependencies
 ├── .env.template             # Template for .env config
 └── README.md                 # This file
@@ -81,15 +77,6 @@ python main.py --test # Test connections
 python main.py # Run sync once
 python scheduler.py 30 # Run sync every 30 minutes
 
-🐳 Docker Usage
-   Buid and run for deployment:
-   docker-compose -f docker-compose.dev.yml up --build
-
-   Build and run for produciton:
-   docker -compose -f docker-compose.prod.yml up --build -d
-
-   Deployment
-   ./deploy.sh
 
 📌 Troubleshooting
 -If test_sync.py fails on mock or argument issues, check return mocks and hardcoded values like uid=21.
