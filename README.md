@@ -27,8 +27,9 @@ This project synchronizes worklogs(timesheets) from tempo(JIRA) into Odoo, allow
 ├── jira.py                   # JIRA issue fetching and parsing
 ├── odoo.py                   # Odoo connection and timesheet logging
 ├── utils.py                  # Configuration, logging, and helpers
-├── scheduler.py              # Scheduled runs using APScheduler
-├── test_sync.py              # 27 Pytest-based unit tests
+├── cron_sync_simple.py       # Windows-compatible cron script
+├── run_sync.bat              # Windows Task Scheduler batch file
+├── install_windows.bat       # Windows installation script
 ├── requirements.txt          # Python dependencies
 ├── .env.template             # Template for .env config
 └── README.md                 # This file
@@ -42,19 +43,24 @@ This project synchronizes worklogs(timesheets) from tempo(JIRA) into Odoo, allow
 -Fully testable with 30+ Pytest cases
 -Supports Docker deployment for easy setup 
 -Supports .env configuration
--Supports sheduling with APScheduler
+-Supports Windows Task Scheduler automation
 
 🔧 Setup Instructions
 
-1.Clone the repository
+1. Clone the repository
 
-git clone https://github.com/your-org/jira-odoo-sync.git
+```
+git clone https://github.com/KerimKarovic/Jira-Odoo-Connector.git
 cd jira-odoo-sync
+```
 
-1. Create a .env file 
- dp .env.template .env
+2. Create a .env file 
+```
+cp .env.template .env
+```
 
-Update values like :
+Update values like:
+```
 ODOO_URL=https://odoo.example.com
 ODOO_DB=mydb
 ODOO_USERNAME=your_user
@@ -65,19 +71,21 @@ JIRA_EMAIL=your_email@example.com
 JIRA_API_TOKEN=your_jira_api_token
 
 TEMPO_API_TOKEN=your_tempo_token
-
+```
 
 🧪 Running Tests
 
+```
 pytest test_sync.py
+```
 
 ▶️Running the Sync Scripts
 
+```
 python main.py --test # Test connections
 python main.py # Run sync once
-python scheduler.py 30 # Run sync every 30 minutes
-
-
+run_sync.bat # Run with Windows batch file
+```
 
 📌 Troubleshooting
 -If test_sync.py fails on mock or argument issues, check return mocks and hardcoded values like uid=21.
@@ -88,15 +96,23 @@ python scheduler.py 30 # Run sync every 30 minutes
 
 ## Automated Deployment
 
-### Cron Job Setup
+### Windows Task Scheduler Setup
 
-For automated syncing, you can set up a cron job to run the sync at regular intervals:
+For automated syncing on Windows:
 
-1. Use the `cron_sync.py` script for automated runs
-2. Set up a cron job to run this script at your desired frequency
-3. See `CRON_SETUP.md` for detailed instructions for different platforms
+1. Run the `install_windows.bat` script to set up the environment
+2. Test the sync manually with `run_sync.bat`
+3. Open Windows Task Scheduler:
+   - Create Basic Task: "JIRA-Odoo Sync"
+   - Trigger: Daily (or your preferred schedule)
+   - Action: Start a program
+   - Program/script: `C:\path\to\jira_odoo_sync\run_sync.bat`
+   - Start in: `C:\path\to\jira_odoo_sync`
 
-Example cron job (runs every hour):
+### Linux/Unix Cron Setup
+
+For Linux/Unix systems, set up a cron job:
+
 ```
 0 * * * * cd /path/to/jira-odoo-sync && /path/to/python cron_sync.py
 ```
