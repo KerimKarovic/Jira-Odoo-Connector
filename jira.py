@@ -114,23 +114,34 @@ def get_epic_odoo_url(epic_key):
 
 def extract_odoo_task_id_from_url(odoo_url):
     """
-    Extract Odoo task ID from URL
+    Extract Odoo task ID and model type from URL
     Args:
         odoo_url: URL like 'https://your-odoo.com/web#id=7346&model=project.task'
-    Returns: Task ID as integer or None
+    Returns: Tuple of (task_id, model_type) or (None, None)
     """
     if not odoo_url:
-        return None
+        return None, None
     
     try:
         # Extract ID from URL pattern
+        task_id = None
+        model_type = 'project.task'  # Default
+        
         if 'id=' in str(odoo_url):
             task_id = str(odoo_url).split('id=')[1].split('&')[0]
-            return int(task_id)
-    except (ValueError, IndexError):
-        pass
-    
-    return None
+            task_id = int(task_id)
+        
+        # Extract model type - check for both patterns
+        if 'model=' in str(odoo_url):
+            model_part = str(odoo_url).split('model=')[1].split('&')[0]
+            # Handle URL encoding
+            model_type = model_part.replace('%2E', '.')
+        
+        return task_id, model_type
+        
+    except (ValueError, IndexError) as e:
+        print(f"⚠️ Error parsing Odoo URL {odoo_url}: {e}")
+        return None, None
 
 def test_jira_connection():
     """Test JIRA API connection"""

@@ -51,26 +51,28 @@ def sync_tempo_worklogs_to_odoo(worklog):
             print(f"⚠️ No Odoo URL found for {jira_key} or its Epic - SKIPPING")
             return False
         
-        # Extract Odoo task ID from URL
-        odoo_task_id = extract_odoo_task_id_from_url(issue_data['odoo_url'])
+        # Extract Odoo task ID and model type from URL
+        odoo_task_id, model_type = extract_odoo_task_id_from_url(issue_data['odoo_url'])
         if not odoo_task_id:
             print(f"❌ Could not extract task ID from URL: {issue_data['odoo_url']}")
             return False
         
-        # Show task source
+        # Show task source and model type
         task_source = issue_data.get('task_source', 'unknown')
+        model_name = "helpdesk ticket" if model_type == 'helpdesk.ticket' else "project task"
+        
         if task_source == 'epic':
             epic_key = issue_data.get('epic_key', 'Unknown')
-            print(f"🎯 Found Odoo task ID: {odoo_task_id} (via Epic {epic_key})")
+            print(f"🎯 Found Odoo {model_name} ID: {odoo_task_id} (via Epic {epic_key})")
         else:
-            print(f"🎯 Found Odoo task ID: {odoo_task_id} (direct)")
+            print(f"🎯 Found Odoo {model_name} ID: {odoo_task_id} (direct)")
         
         # Extract worklog details
         time_seconds = worklog.get('timeSpentSeconds', 0)
         hours = convert_seconds_to_hours(time_seconds)
         
         # Use issue title as description (not worklog description)
-        description = issue_data.get('description', f'Work on {jira_key}')
+        description = issue_data.get('summary', f'Work on {jira_key}')
         
         # Get date
         started_date = worklog.get('startDate', '')
@@ -87,14 +89,14 @@ def sync_tempo_worklogs_to_odoo(worklog):
         if tempo_worklog_id:
             print(f"🔗 Tempo Worklog ID: {tempo_worklog_id}")
         
-        # Create worklog entry with Tempo worklog ID
+        # Create worklog entry with model type
         worklog_id = create_worklog_entry(
-            odoo_task_id, hours, description, date, author_name, tempo_worklog_id
+            odoo_task_id, hours, description, date, author_name, tempo_worklog_id, model_type or 'project.task'
         )
         
         if worklog_id:
             source_info = f"via Epic {issue_data.get('epic_key')}" if task_source == 'epic' else "direct"
-            print(f"✅ Successfully synced {jira_key} → Task {odoo_task_id} ({hours}h) [{source_info}]")
+            print(f"✅ Successfully synced {jira_key} → {model_name.title()} {odoo_task_id} ({hours}h) [{source_info}]")
             return True
         else:
             print(f"❌ Failed to create worklog for {jira_key}")

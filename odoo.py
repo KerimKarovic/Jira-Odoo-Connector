@@ -42,16 +42,17 @@ def get_odoo_connection():
         print(f"❌ Error connecting to Odoo: {e}")
         return None, None, None
 
-def create_worklog_entry(task_id: int, hours: float, description: str, work_date: Optional[str] = None, jira_author: Optional[str] = None, tempo_worklog_id: Optional[str] = None) -> Optional[int]:
+def create_worklog_entry(task_id: int, hours: float, description: str, work_date: Optional[str] = None, jira_author: Optional[str] = None, tempo_worklog_id: Optional[str] = None, model_type: str = 'project.task') -> Optional[int]:
     """
     Create a worklog entry in Odoo.
     Args:
-        task_id: Odoo task ID
+        task_id: Odoo task/ticket ID
         hours: Time spent in hours (float)
         description: Work description
         work_date: Date of work (defaults to today)
         jira_author: Original JIRA author name (optional)
         tempo_worklog_id: Tempo worklog ID for duplicate detection (optional)
+        model_type: Odoo model type ('project.task' or 'helpdesk.ticket')
     Returns: Created worklog ID or None
     """
     common, models, uid = get_odoo_connection()
@@ -62,42 +63,80 @@ def create_worklog_entry(task_id: int, hours: float, description: str, work_date
         work_date = date.today().strftime('%Y-%m-%d')
     
     try:
-        # Get task details
-        task_data = models.execute_kw(
-            ODOO_DB, uid, ODOO_PASSWORD,
-            'project.task', 'read',
-            [[int(task_id)]],
-            {'fields': ['name', 'project_id']}
-        )
-        
-        if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-            print(f"❌ Task {task_id} not found in Odoo")
-            return None
+        # Get task/ticket details based on model type
+        if model_type == 'helpdesk.ticket':
+            # For helpdesk tickets
+            task_data = models.execute_kw(
+                ODOO_DB, uid, ODOO_PASSWORD,
+                'helpdesk.ticket', 'read',
+                [[int(task_id)]],
+                {'fields': ['name', 'team_id']}
+            )
             
-        task_name = task_data[0].get('name', 'Unknown Task')
-        project_id_field = task_data[0].get('project_id')
-        
-        # Handle project_id which can be False, int, or [id, name] tuple
-        project_id = None
-        if isinstance(project_id_field, list) and len(project_id_field) > 0:
-            project_id = project_id_field[0]
-        elif isinstance(project_id_field, int):
-            project_id = project_id_field
+            if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
+                print(f"❌ Helpdesk ticket {task_id} not found in Odoo")
+                return None
+                
+            task_name = task_data[0].get('name', 'Unknown Ticket')
+            team_id_field = task_data[0].get('team_id')
+            
+            # Handle team_id which can be False, int, or [id, name] tuple
+            team_id = None
+            if isinstance(team_id_field, list) and len(team_id_field) > 0:
+                team_id = team_id_field[0]
+            elif isinstance(team_id_field, int):
+                team_id = team_id_field
+            
+            print(f"✅ Found helpdesk ticket: {task_name}")
+            
+        else:
+            # For project tasks (existing logic)
+            task_data = models.execute_kw(
+                ODOO_DB, uid, ODOO_PASSWORD,
+                'project.task', 'read',
+                [[int(task_id)]],
+                {'fields': ['name', 'project_id']}
+            )
+            
+            if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
+                print(f"❌ Task {task_id} not found in Odoo")
+                return None
+                
+            task_name = task_data[0].get('name', 'Unknown Task')
+            project_id_field = task_data[0].get('project_id')
+            
+            # Handle project_id which can be False, int, or [id, name] tuple
+            project_id = None
+            if isinstance(project_id_field, list) and len(project_id_field) > 0:
+                project_id = project_id_field[0]
+            elif isinstance(project_id_field, int):
+                project_id = project_id_field
         
         # Enhanced description with JIRA author if provided
         enhanced_description = description
         if jira_author and jira_author != 'Unknown':
             enhanced_description = f"{description} (by {jira_author})"
         
-        # Worklog data using WebDevelopment Team employee
-        worklog_data = {
-            'task_id': int(task_id),
-            'project_id': project_id,
-            'name': str(enhanced_description),
-            'unit_amount': float(hours),
-            'date': str(work_date),
-            'employee_id': WEBDEV_TEAM_EMPLOYEE_ID,
-        }
+        # Worklog data - different structure for helpdesk vs project
+        if model_type == 'helpdesk.ticket':
+            # For helpdesk tickets, create timesheet entry linked to ticket
+            worklog_data = {
+                'helpdesk_ticket_id': int(task_id),
+                'name': str(enhanced_description),
+                'unit_amount': float(hours),
+                'date': str(work_date),
+                'employee_id': WEBDEV_TEAM_EMPLOYEE_ID,
+            }
+        else:
+            # For project tasks (existing logic)
+            worklog_data = {
+                'task_id': int(task_id),
+                'project_id': project_id,
+                'name': str(enhanced_description),
+                'unit_amount': float(hours),
+                'date': str(work_date),
+                'employee_id': WEBDEV_TEAM_EMPLOYEE_ID,
+            }
         
         # Add Tempo worklog ID if provided
         if tempo_worklog_id:
@@ -113,7 +152,8 @@ def create_worklog_entry(task_id: int, hours: float, description: str, work_date
         # Handle the result which should be an integer ID
         if isinstance(worklog_result, int):
             worklog_id = worklog_result
-            print(f"✅ Created worklog entry {worklog_id} for WebDevelopment Team")
+            model_name = "helpdesk ticket" if model_type == 'helpdesk.ticket' else "project task"
+            print(f"✅ Created worklog entry {worklog_id} for WebDevelopment Team ({model_name})")
             return worklog_id
         else:
             print(f"❌ Unexpected result type from worklog creation: {type(worklog_result)}")
