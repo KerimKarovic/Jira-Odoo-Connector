@@ -52,14 +52,14 @@ def sync_tempo_worklogs_to_odoo(worklog):
             return False
         
         # Extract Odoo task ID and model type from URL
-        odoo_task_id, model_type = extract_odoo_task_id_from_url(issue_data['odoo_url'])
+        odoo_task_id, model = extract_odoo_task_id_from_url(issue_data['odoo_url'])
         if not odoo_task_id:
             print(f"❌ Could not extract task ID from URL: {issue_data['odoo_url']}")
             return False
         
         # Show task source and model type
         task_source = issue_data.get('task_source', 'unknown')
-        model_name = "helpdesk ticket" if model_type == 'helpdesk.ticket' else "project task"
+        model_name = "helpdesk ticket" if model == 'helpdesk.ticket' else "project task"
         
         if task_source == 'epic':
             epic_key = issue_data.get('epic_key', 'Unknown')
@@ -91,7 +91,7 @@ def sync_tempo_worklogs_to_odoo(worklog):
         
         # Create worklog entry with model type
         worklog_id = create_worklog_entry(
-            odoo_task_id, hours, description, date, author_name, tempo_worklog_id, model_type or 'project.task'
+            odoo_task_id, hours, description, date, author_name, tempo_worklog_id, model or 'project.task'
         )
         
         if worklog_id:

@@ -131,6 +131,10 @@ def extract_odoo_task_id_from_url(odoo_url):
             task_id = str(odoo_url).split('id=')[1].split('&')[0]
             task_id = int(task_id)
         
+        # If no task_id found, return (None, None)
+        if task_id is None:
+            return None, None
+        
         # Extract model type - check for both patterns
         if 'model=' in str(odoo_url):
             model_part = str(odoo_url).split('model=')[1].split('&')[0]
