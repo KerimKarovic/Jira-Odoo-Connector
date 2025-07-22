@@ -1,8 +1,8 @@
 
 #!/usr/bin/env python3
 """
-JIRA to Odoo Timesheet Sync via Tempo
-Main script that syncs Tempo timesheets to Odoo
+JIRA to Odoo Worklog Sync via Tempo
+Main script that syncs Tempo worklogs to Odoo
 """
 
 import sys
@@ -11,37 +11,37 @@ from datetime import datetime
 # Import our modules
 from tempo import get_tempo_worklogs
 from jira import get_issue_with_odoo_url, extract_odoo_task_id_from_url
-from odoo import create_timesheet_entry, check_existing_timesheet_by_worklog_id, test_odoo_connection
+from odoo import create_worklog_entry, check_existing_worklogs_by_worklog_id, test_odoo_connection
 
 def convert_seconds_to_hours(seconds):
     """Convert seconds to hours (float)"""
     return round(seconds / 3600, 2)
 
-def sync_tempo_timesheet_to_odoo(timesheet):
+def sync_tempo_worklogs_to_odoo(worklog):
     """
-    Sync Tempo timesheet to Odoo using hierarchy logic:
+    Sync Tempo worklogs to Odoo using hierarchy logic:
     1. Use direct Odoo URL from work item
     2. Use Odoo URL from parent Epic if no direct URL
     3. Skip if neither has Odoo URL
     """
     try:
         # Get Tempo worklog ID for duplicate detection
-        tempo_worklog_id = timesheet.get('tempoWorklogId')
+        tempo_worklog_id = worklog.get('tempoWorklogId')
         
         # Check for duplicates using Tempo worklog ID first
-        if tempo_worklog_id and check_existing_timesheet_by_worklog_id(tempo_worklog_id):
-            print(f"⚠️ Timesheet already exists for Tempo worklog ID: {tempo_worklog_id}")
+        if tempo_worklog_id and check_existing_worklogs_by_worklog_id(tempo_worklog_id):
+            print(f"⚠️ Worklog entry already exists for Tempo worklog ID: {tempo_worklog_id}")
             return False
         
-        # Get issue key from timesheet
-        issue = timesheet.get('issue', {})
+        # Get issue key from worklog 
+        issue = worklog.get('issue', {})
         jira_key = issue.get('key')
         
         if not jira_key:
-            print(f"⚠️ Skipping timesheet without JIRA key")
+            print(f"⚠️ Skipping worklog without JIRA key")
             return False
         
-        print(f"🔄 Processing timesheet for {jira_key}")
+        print(f"🔄 Processing worklog  for {jira_key}")
         
         # Get issue details with Odoo URL (checks hierarchy)
         issue_data = get_issue_with_odoo_url(jira_key)
@@ -63,19 +63,19 @@ def sync_tempo_timesheet_to_odoo(timesheet):
         else:
             print(f"🎯 Found Odoo task ID: {odoo_task_id} (direct)")
         
-        # Extract timesheet details
-        time_seconds = timesheet.get('timeSpentSeconds', 0)
+        # Extract worklog details
+        time_seconds = worklog.get('timeSpentSeconds', 0)
         hours = convert_seconds_to_hours(time_seconds)
         
         # Use issue title as description (not worklog description)
         description = issue_data.get('description', f'Work on {jira_key}')
         
         # Get date
-        started_date = timesheet.get('startDate', '')
+        started_date = worklog.get('startDate', '')
         date = started_date if started_date else datetime.now().strftime('%Y-%m-%d')
         
         # Get author info
-        author = timesheet.get('author', {})
+        author = worklog.get('author', {})
         author_name = author.get('displayName', 'Unknown')
         
         print(f"⏱️ Time to log: {hours} hours")
@@ -85,49 +85,49 @@ def sync_tempo_timesheet_to_odoo(timesheet):
         if tempo_worklog_id:
             print(f"🔗 Tempo Worklog ID: {tempo_worklog_id}")
         
-        # Create timesheet entry with Tempo worklog ID
-        timesheet_id = create_timesheet_entry(
+        # Create worklog entry with Tempo worklog ID
+        worklog_id = create_worklog_entry(
             odoo_task_id, hours, description, date, author_name, tempo_worklog_id
         )
         
-        if timesheet_id:
+        if worklog_id:
             source_info = f"via Epic {issue_data.get('epic_key')}" if task_source == 'epic' else "direct"
             print(f"✅ Successfully synced {jira_key} → Task {odoo_task_id} ({hours}h) [{source_info}]")
             return True
         else:
-            print(f"❌ Failed to create timesheet for {jira_key}")
+            print(f"❌ Failed to create worklog for {jira_key}")
             return False
             
     except Exception as e:
-        jira_key = timesheet.get('issue', {}).get('key', 'Unknown')
-        print(f"❌ Error processing timesheet for {jira_key}: {e}")
+        jira_key = worklog.get('issue', {}).get('key', 'Unknown')
+        print(f"❌ Error processing worklog for {jira_key}: {e}")
         return False
 
 def main():
     """Main function using Tempo API approach"""
-    print("🚀 JIRA to Odoo Timesheet Sync via Tempo")
+    print("🚀 JIRA to Odoo Worklogs Sync via Tempo")
     
     try:
-        # Step 1: Fetch Tempo timesheets
-        print("\n📥 Fetching recent timesheets from Tempo...")
-        tempo_timesheets = get_tempo_worklogs()
+        # Step 1: Fetch Tempo worklogs
+        print("\n📥 Fetching recent worklogs from Tempo...")
+        tempo_worklogs = get_tempo_worklogs()
         
-        if not tempo_timesheets:
-            print("⚠️ No Tempo timesheets found.")
+        if not tempo_worklogs:
+            print("⚠️ No Tempo worklogs found.")
             return
         
-        print(f"✅ Found {len(tempo_timesheets)} Tempo timesheets")
+        print(f"✅ Found {len(tempo_worklogs)} Tempo worklogs")
         
-        # Step 2: Process each timesheet
-        print("\n🔄 Processing timesheets...")
+        # Step 2: Process each worklog
+        print("\n🔄 Processing worklogs...")
         
         sync_count = 0
         skip_count = 0
         
-        for i, timesheet in enumerate(tempo_timesheets, 1):
-            print(f"\n[{i}/{len(tempo_timesheets)}] ", end="")
+        for i, worklog in enumerate(tempo_worklogs, 1):
+            print(f"\n[{i}/{len(tempo_worklogs)}] ", end="")
             
-            if sync_tempo_timesheet_to_odoo(timesheet):
+            if sync_tempo_worklogs_to_odoo(worklog):
                 sync_count += 1
             else:
                 skip_count += 1

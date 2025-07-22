@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-JIRA to Odoo Timesheet Sync - Cron Job Script (Windows Compatible)
+JIRA to Odoo Worklogs Sync - Cron Job Script (Windows Compatible)
 This script is designed to be run as a cron job with simple text output.
 """
 

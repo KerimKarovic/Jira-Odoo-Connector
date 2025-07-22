@@ -1,7 +1,7 @@
 
 """
 Odoo integration
-Handles connection to Odoo and timesheet creation
+Handles connection to Odoo and worklog creation
 """
 
 import xmlrpc.client
@@ -42,9 +42,9 @@ def get_odoo_connection():
         print(f"❌ Error connecting to Odoo: {e}")
         return None, None, None
 
-def create_timesheet_entry(task_id: int, hours: float, description: str, work_date: Optional[str] = None, jira_author: Optional[str] = None, tempo_worklog_id: Optional[str] = None) -> Optional[int]:
+def create_worklog_entry(task_id: int, hours: float, description: str, work_date: Optional[str] = None, jira_author: Optional[str] = None, tempo_worklog_id: Optional[str] = None) -> Optional[int]:
     """
-    Create a timesheet entry in Odoo.
+    Create a worklog entry in Odoo.
     Args:
         task_id: Odoo task ID
         hours: Time spent in hours (float)
@@ -52,7 +52,7 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
         work_date: Date of work (defaults to today)
         jira_author: Original JIRA author name (optional)
         tempo_worklog_id: Tempo worklog ID for duplicate detection (optional)
-    Returns: Created timesheet ID or None
+    Returns: Created worklog ID or None
     """
     common, models, uid = get_odoo_connection()
     if not uid or not models:
@@ -89,8 +89,8 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
         if jira_author and jira_author != 'Unknown':
             enhanced_description = f"{description} (by {jira_author})"
         
-        # Timesheet data using WebDevelopment Team employee
-        timesheet_data = {
+        # Worklog data using WebDevelopment Team employee
+        worklog_data = {
             'task_id': int(task_id),
             'project_id': project_id,
             'name': str(enhanced_description),
@@ -101,30 +101,30 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
         
         # Add Tempo worklog ID if provided
         if tempo_worklog_id:
-            timesheet_data['x_jira_worklog_id'] = str(tempo_worklog_id)
+            worklog_data['x_jira_worklog_id'] = str(tempo_worklog_id)
         
-        # Create the timesheet
-        timesheet_result = models.execute_kw(
+        # Create the worklog
+        worklog_result = models.execute_kw(
             ODOO_DB, uid, ODOO_PASSWORD,
             'account.analytic.line', 'create',
-            [timesheet_data]
+            [worklog_data]
         )
         
         # Handle the result which should be an integer ID
-        if isinstance(timesheet_result, int):
-            timesheet_id = timesheet_result
-            print(f"✅ Created timesheet entry {timesheet_id} for WebDevelopment Team")
-            return timesheet_id
+        if isinstance(worklog_result, int):
+            worklog_id = worklog_result
+            print(f"✅ Created worklog entry {worklog_id} for WebDevelopment Team")
+            return worklog_id
         else:
-            print(f"❌ Unexpected result type from timesheet creation: {type(timesheet_result)}")
+            print(f"❌ Unexpected result type from worklog creation: {type(worklog_result)}")
             return None
         
     except Exception as e:
-        print(f"❌ Error creating timesheet: {e}")
+        print(f"❌ Error creating worklog: {e}")
         return None
 
-def check_existing_timesheet_by_worklog_id(tempo_worklog_id: Optional[str]) -> bool:
-    """Check if timesheet entry already exists using Tempo worklog ID"""
+def check_existing_worklogs_by_worklog_id(tempo_worklog_id: Optional[str]) -> bool:
+    """Check if worklog entry already exists using Tempo worklog ID"""
     if not tempo_worklog_id:
         return False
         
@@ -141,13 +141,13 @@ def check_existing_timesheet_by_worklog_id(tempo_worklog_id: Optional[str]) -> b
         )
         
         if existing and isinstance(existing, list) and len(existing) > 0:
-            print(f"⚠️ Timesheet already exists for Tempo worklog ID: {tempo_worklog_id}")
+            print(f"⚠️ Worklog already exists for Tempo worklog ID: {tempo_worklog_id}")
             return True
         
         return False
         
     except Exception as e:
-        print(f"❌ Error checking existing timesheet: {e}")
+        print(f"❌ Error checking existing worklog: {e}")
         return False
 
 def test_odoo_connection():
@@ -185,6 +185,7 @@ def get_recent_tasks(limit=10):
             return tasks
         else:
             print(f"⚠️ Unexpected return type from Odoo API: {type(tasks)}")
+
             return []
 
     except Exception as e:

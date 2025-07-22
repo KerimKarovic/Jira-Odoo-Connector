@@ -71,26 +71,26 @@ def get_tempo_worklogs():
 
 
 
-def enrich_timesheet_with_issue_key(timesheet):
+def enrich_worklogs_with_issue_key(worklog):
     """
-    Enrich timesheet with JIRA issue key and author name
+    Enrich worklog with JIRA issue key and author name
     Args:
-        timesheet: Raw timesheet from Tempo API
-    Returns: Enriched timesheet with issue key and author name
+        worklog: Raw worklog from Tempo API
+    Returns: Enriched worklog with issue key and author name
     """
     try:
         from jira import JIRA_URL, auth, headers as jira_headers
         
-        # Get issue ID from timesheet
-        issue = timesheet.get('issue', {})
+        # Get issue ID from worklog
+        issue = worklog.get('issue', {})
         issue_id = issue.get('id')
         
         # If issue already has a key, we can skip the API call
         if issue.get('key'):
-            return timesheet
+            return worklog
             
         if not issue_id:
-            print("⚠️ No issue ID found in timesheet")
+            print("⚠️ No issue ID found in worklog")
             return None
         
         # Fetch issue details from JIRA
@@ -102,7 +102,7 @@ def enrich_timesheet_with_issue_key(timesheet):
         issue_key = issue_data.get('key')
         
         # Get author details
-        author = timesheet.get('author', {})
+        author = worklog.get('author', {})
         author_account_id = author.get('accountId')
         author_name = 'Unknown'
         
@@ -115,16 +115,16 @@ def enrich_timesheet_with_issue_key(timesheet):
                 user_data = user_response.json()
                 author_name = user_data.get('displayName', 'Unknown')
         
-        # Enrich the timesheet
-        enriched_timesheet = timesheet.copy()
-        enriched_timesheet['issue']['key'] = issue_key
-        enriched_timesheet['author']['displayName'] = author_name
+        # Enrich the worklog
+        enriched_worklog = worklog.copy()
+        enriched_worklog['issue']['key'] = issue_key
+        enriched_worklog['author']['displayName'] = author_name
         
-        return enriched_timesheet
+        return enriched_worklog
         
     except Exception as e:
-        print(f"⚠️ Error enriching timesheet: {e}")
-        return timesheet  # Return original if enrichment fails
+        print(f"⚠️ Error enriching worklog: {e}")
+        return worklog  # Return original if enrichment fails
 
 
 
