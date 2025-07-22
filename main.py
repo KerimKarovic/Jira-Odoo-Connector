@@ -35,7 +35,9 @@ def sync_tempo_worklogs_to_odoo(worklog):
         
         # Get issue key from worklog 
         issue = worklog.get('issue', {})
-        jira_key = issue.get('key')
+        if issue is None:
+            issue ={}
+        jira_key = issue.get('key',)
         
         if not jira_key:
             print(f"⚠️ Skipping worklog without JIRA key")
@@ -99,10 +101,12 @@ def sync_tempo_worklogs_to_odoo(worklog):
             return False
             
     except Exception as e:
-        jira_key = worklog.get('issue', {}).get('key', 'Unknown')
-        print(f"❌ Error processing worklog for {jira_key}: {e}")
-        return False
-
+       issue = worklog.get('issue', {})
+       if issue is None:
+           issue = {}
+       jira_key = issue.get('key', 'Unknown')
+       print(f"Error proccesing worklog for {jira_key}")
+       return False    
 def main():
     """Main function using Tempo API approach"""
     print("🚀 JIRA to Odoo Worklogs Sync via Tempo")
