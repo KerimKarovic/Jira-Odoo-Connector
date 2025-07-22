@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 
 # Import our modules
-from tempo import get_tempo_worklogs
+from tempo import get_tempo_worklogs, enrich_worklogs_with_issue_key
 from jira import get_issue_with_odoo_url, extract_odoo_task_id_from_url
 from odoo import create_worklog_entry, check_existing_worklogs_by_worklog_id, test_odoo_connection
 
@@ -122,14 +122,28 @@ def main():
         
         print(f"✅ Found {len(tempo_worklogs)} Tempo worklogs")
         
-        # Step 2: Process each worklog
+        # Step 1.5: Enrich worklogs with JIRA data
+        print("\n🔄 Enriching worklogs with JIRA issue data...")
+        from tempo import enrich_worklogs_with_issue_key
+        
+        enriched_worklogs = []
+        for worklog in tempo_worklogs:
+            enriched = enrich_worklogs_with_issue_key(worklog)
+            if enriched:
+                enriched_worklogs.append(enriched)
+            else:
+                print(f"⚠️ Could not enrich worklog {worklog.get('tempoWorklogId', 'unknown')}")
+        
+        print(f"✅ Enriched {len(enriched_worklogs)} worklogs with JIRA data")
+        
+        # Step 2: Process each enriched worklog
         print("\n🔄 Processing worklogs...")
         
         sync_count = 0
         skip_count = 0
         
-        for i, worklog in enumerate(tempo_worklogs, 1):
-            print(f"\n[{i}/{len(tempo_worklogs)}] ", end="")
+        for i, worklog in enumerate(enriched_worklogs, 1):
+            print(f"\n[{i}/{len(enriched_worklogs)}] ", end="")
             
             if sync_tempo_worklogs_to_odoo(worklog):
                 sync_count += 1
