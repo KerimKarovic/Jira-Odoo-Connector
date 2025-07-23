@@ -8,3 +8,5 @@ pytest>=7.0.0
 # Windows-specific dependencies
 pywin32>=306; platform_system == "Windows"
 
+# Email notifications
+secure-smtplib>=0.1.1

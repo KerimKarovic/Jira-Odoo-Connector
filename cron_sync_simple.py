@@ -10,6 +10,7 @@ import logging
 from datetime import datetime
 from main import main
 from utils import validate_config
+from email_notifier import email_notifier
 
 def run_cron_sync():
     """
@@ -45,7 +46,9 @@ def run_cron_sync():
         start_time = datetime.now()
         logging.info(f"Sync started at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # Run the main sync process
+        # Send weekly email if needed
+        email_notifier.send_weekly_health_report()
+        # Run sync
         main()
         
         # Calculate duration
@@ -56,7 +59,7 @@ def run_cron_sync():
         return True
         
     except Exception as e:
-        logging.error(f"Cron sync failed: {e}")
+        email_notifier.log_error(f"Cron sync failed: {e}")
         return False
     finally:
         logging.info("Cron job execution completed")
