@@ -12,11 +12,13 @@ from datetime import datetime
 from tempo import get_tempo_worklogs, enrich_worklogs_with_issue_key
 from jira import get_issue_with_odoo_url, extract_odoo_task_id_from_url
 from odoo import create_timesheet_entry, check_existing_worklogs_by_worklog_id, test_odoo_connection
+from email_notifier import email_notifier, email_on_error
 
 def convert_seconds_to_hours(seconds):
     """Convert seconds to hours (float)"""
     return round(seconds / 3600, 2)
 
+@email_on_error(severity="normal")
 def sync_tempo_worklogs_to_odoo(worklog):
     """
     Sync Tempo worklogs to Odoo using hierarchy logic:
@@ -118,6 +120,7 @@ def sync_tempo_worklogs_to_odoo(worklog):
        jira_key = issue.get('key', 'Unknown')
        print(f"Error processing worklog for {jira_key}")
        return False    
+@email_on_error(severity="critical")
 def main():
     """Main function using Tempo API approach"""
     print("🚀 JIRA to Odoo Worklogs Sync via Tempo")

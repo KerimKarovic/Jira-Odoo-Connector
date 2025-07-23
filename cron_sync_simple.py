@@ -59,7 +59,8 @@ def run_cron_sync():
         return True
         
     except Exception as e:
-        email_notifier.log_error(f"Cron sync failed: {e}")
+        email_notifier.log_error(e, {"source": "cron_sync", "timestamp": start_time.isoformat()}, severity="critical")
+        logging.error(f"Cron sync failed: {e}")
         return False
     finally:
         logging.info("Cron job execution completed")
