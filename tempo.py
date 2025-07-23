@@ -31,7 +31,7 @@ def get_tempo_worklogs():
         end_date = datetime.datetime.now()
         start_date = end_date - datetime.timedelta(hours=LOOKBACK_HOURS)
         
-        print(f"📅 Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        print(f"📅 Pulling Tempo worklogs from: {start_date.strftime('%Y-%m-%d')} → {end_date.strftime('%Y-%m-%d')}")
         
         # Tempo API endpoint for worklogs
         url = f"{TEMPO_BASE_URL}/worklogs"
@@ -42,16 +42,16 @@ def get_tempo_worklogs():
             'limit': 1000
         }
         
-        print(f"🔗 Tempo API URL: {url}")
-        print(f"📋 Parameters: {params}")
-        print(f"🔑 Using token: {TEMPO_API_TOKEN[:10]}...")
+        print(f"🔗 Tempo API Endpoint: {url}")
+        print(f"📋 API Query Params: {params}")
+        print(f"🔑 Authenticating using API token: {TEMPO_API_TOKEN[:10]}... (truncated)")
         
         response = requests.get(url, headers=headers, params=params)
         
         if response.status_code == 401:
-            print(f"❌ Tempo API 401 Unauthorized - Check your API token!")
-            print(f"🔑 Current token starts with: {TEMPO_API_TOKEN[:10]}...")
-            print(f"📋 Make sure token has 'View worklogs' permission")
+            print(f"❌ 41 Unauthorized: Invalid or expired Tempo API token")
+            print(f"🔑 Provided token prefix: {TEMPO_API_TOKEN[:10]}...")
+            print(f"📋 Ensure this token has 'View worklogs' premission enabled in Tempo")
             return []
         
         response.raise_for_status()
@@ -59,14 +59,14 @@ def get_tempo_worklogs():
         data = response.json()
         worklogs = data.get('results', [])
         
-        print(f"✅ Found {len(worklogs)} worklogs from Tempo (all users)")
+        print(f"✅ Retrieved {len(worklogs)} worklogs from Tempo API")
         return worklogs
         
     except requests.exceptions.RequestException as e:
-        print(f"❌ Error fetching Tempo worklogs: {e}")
+        print(f"❌ Fatal JSON/API error while retrieving Tempo worklogs: {e}")
         return []
     except Exception as e:
-        print(f"❌ Unexpected error fetching Tempo worklogs: {e}")
+        print(f"❌ Connection error during Tempo API fetch {e}")
         return []
 
 
@@ -123,7 +123,7 @@ def enrich_worklogs_with_issue_key(worklog):
         return enriched_worklog
         
     except Exception as e:
-        print(f"⚠️ Error enriching worklog: {e}")
+        print(f"⚠️ Skipped worklog die to enrichment error: {e}")
         return worklog  # Return original if enrichment fails
 
 

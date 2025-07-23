@@ -32,14 +32,14 @@ def get_odoo_connection():
         if not uid:
             raise ValueError("Authentication failed")
             
-        print(f"✅ Connected to Odoo as user ID: {uid}")
+        print(f"✅ Connected to  XML-RPC API (User ID; {uid})")
         return common, models, uid
         
     except xmlrpc.client.Fault as e:
-        print(f"❌ Odoo XML-RPC error: {e}")
+        print(f"❌ XML-RPC exception while connecting to Odoo: {e}")
         return None, None, None
     except Exception as e:
-        print(f"❌ Error connecting to Odoo: {e}")
+        print(f"❌ Fatal connection error: Could not authenticate or reach Odoo: {e}")
         return None, None, None
 
 
@@ -75,12 +75,12 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
             )
             
             if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-                print(f"❌ Helpdesk ticket {task_id} not found in Odoo")
+                print(f"❌ Odoo helpdesk.ticket ID {task_id} not found- skipping worklog creation")
                 return None
                 
             task_name = task_data[0].get('name', 'Unknown Ticket')
             
-            print(f"✅ Found helpdesk ticket: {task_name}")
+            print(f"✅ Verified helpdesk ticket ID {task_id} exists: {task_name}")
             
         else:
             # For project tasks (existing logic)
@@ -92,7 +92,7 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
             )
             
             if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-                print(f"❌ Task {task_id} not found in Odoo")
+                print(f"❌ Odoo project.task ID {task_id} not found- skipping worklog creation")
                 return None
                 
             task_name = task_data[0].get('name', 'Unknown Task')
@@ -141,14 +141,14 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
         if isinstance(worklog_result, int):
             worklog_id = worklog_result
             model_name = "helpdesk ticket" if model_type == 'helpdesk.ticket' else "project task"
-            print(f"✅ Created worklog entry {worklog_id} for WebDevelopment Team ({model_name})")
+            print(f"✅ Worklog created successfully for task #{task_id} ({model_name}) with ID {worklog_id}")
             return worklog_id
         else:
-            print(f"❌ Unexpected result type from worklog creation: {type(worklog_result)}")
+            print(f"❌ Unexpected return rype from Odoo worklog creation: {type(worklog_result)}")
             return None
         
     except Exception as e:
-        print(f"❌ Error creating worklog for {model_type} ID={task_id}, user={jira_author}, date={work_date}: {e}")
+        print(f"❌ Exception while creating worklog for {model_type} ID={task_id}, user={jira_author}, date={work_date}: {e}")
         return None
 
 def check_existing_worklogs_by_worklog_id(tempo_worklog_id: Optional[str]) -> bool:
@@ -170,13 +170,13 @@ def check_existing_worklogs_by_worklog_id(tempo_worklog_id: Optional[str]) -> bo
         )
         
         if existing_ids:
-            print(f"⚠️ Worklog already exists for Tempo worklog ID: {tempo_worklog_id}")
+            print(f"⚠️ Duplicate worklog detected- tempo worklog ID {tempo_worklog_id} already exists in Odoo")
             return True
         
         return False
         
     except Exception as e:
-        print(f"❌ Error checking existing worklog: {e}")
+        print(f"❌ Error querying Odoo for existing worklog ID {tempo_worklog_id}: {e}")
         return False
 
 def test_odoo_connection():
@@ -213,12 +213,12 @@ def get_recent_tasks(limit=10):
         if isinstance(tasks, list):
             return tasks
         else:
-            print(f"⚠️ Unexpected return type from Odoo API: {type(tasks)}")
+            print(f"⚠️Warning: Unexpected task query result type: {type(tasks)}- expected list")
 
             return []
 
     except Exception as e:
-        print(f"❌ Error fetching tasks: {e}")
+        print(f"❌ Exception while retrieving recent Odoo tasks: {e}")
         return []
 
 # ========== DEMO RUN ==========
@@ -227,5 +227,5 @@ if __name__ == "__main__":
     for task in tasks:
         jira_url = task.get('x_studio_jira_url', '')
         task_name = task.get('name', 'No name')
-        print(f"- Task {task['id']}: {task_name} | JIRA: {jira_url}")
+        print(f"📝 Recent Odoo task : #{task['id']} | Title : {task_name} | Linked JIRA: {jira_url}")
 

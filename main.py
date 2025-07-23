@@ -30,7 +30,7 @@ def sync_tempo_worklogs_to_odoo(worklog):
         
         # Check for duplicates using Tempo worklog ID first
         if tempo_worklog_id and check_existing_worklogs_by_worklog_id(tempo_worklog_id):
-            print(f"⚠️ Worklog entry already exists for Tempo worklog ID: {tempo_worklog_id}")
+            print(f"⚠️ Worklog entry already exists for Tempo worklog ID: {tempo_worklog_id} - skipping sync to prevent duplicate enrty")
             return False
         
         # Get issue key from worklog 
@@ -40,21 +40,29 @@ def sync_tempo_worklogs_to_odoo(worklog):
         jira_key = issue.get('key',)
         
         if not jira_key:
-            print(f"⚠️ Skipping worklog without JIRA key")
+            print(f"⚠️ Skipping worklog with missing JIRA key (TEMPO ID: {worklog.get('tempoWorklogId', 'unknown')})")
             return False
         
-        print(f"🔄 Processing tempo worklog ID: {jira_key}")
+        print(f"🔄 Processing worklog: JIRA key: {jira_key}")
         
         # Get issue details with Odoo URL (checks hierarchy)
         issue_data = get_issue_with_odoo_url(jira_key)
         if not issue_data or not issue_data.get('odoo_url'):
-            print(f"⚠️ No Odoo URL found for {jira_key} or its Epic - SKIPPING")
+            print(f"⚠️ No Odoo URL found for {jira_key} or its Epic - SKIPPING WORKLOG SYNC")
             return False
         
         # Extract Odoo task ID and model type from URL
         odoo_task_id, model = extract_odoo_task_id_from_url(issue_data['odoo_url'])
         if not odoo_task_id:
             print(f"❌ Could not extract task ID from URL: {issue_data['odoo_url']}")
+            print(f"   🔍 URL Analysis:")
+            print(f"   📋 Raw URL: '{issue_data['odoo_url']}'")
+            print(f"   🔗 Expected format: 'https://odoo.com/web#id=123&model=project.task'")
+            print(f"   ❓ Check if URL contains 'id=' parameter")
+            print(f"   📝 JIRA Issue: {jira_key}")
+            print(f"   🎯 Source: {issue_data.get('task_source', 'unknown')}")
+            if issue_data.get('task_source') == 'epic':
+                print(f"   🔗 Epic Key: {issue_data.get('epic_key', 'Unknown')}")
             return False
         
        
@@ -64,9 +72,9 @@ def sync_tempo_worklogs_to_odoo(worklog):
         
         if task_source == 'epic':
             epic_key = issue_data.get('epic_key', 'Unknown')
-            print(f"🎯 Found Odoo {model} ID: {odoo_task_id} (via Epic {epic_key})")
+            print(f"🎯 Matched Epic → Odoo {model}: ID {odoo_task_id}, Epic Key: {epic_key} ")
         else:
-            print(f"🎯 Found Odoo {model} ID: {odoo_task_id} (direct)")
+            print(f"🎯 Matched JIRA Issue → Odoo {model} ID: {odoo_task_id} (direct)")
         
         # Extract worklog details
         time_seconds = worklog.get('timeSpentSeconds', 0)
@@ -85,8 +93,8 @@ def sync_tempo_worklogs_to_odoo(worklog):
         
         print(f"⏱️ Time to log: {hours} hours")
         print(f"📝 Description: '{description}' (from {jira_key} title)")
-        print(f"👤 Author: {author_name}")
-        print(f"📅 Date: {date}")
+        print(f"👤 Logged by : {author_name}")
+        print(f"📅 Worklog date: {date}")
         if tempo_worklog_id:
             print(f"🔗 Tempo Worklog ID: {tempo_worklog_id}")
         
@@ -97,10 +105,10 @@ def sync_tempo_worklogs_to_odoo(worklog):
         
         if worklog_id:
             source_info = f"via Epic {issue_data.get('epic_key')}" if task_source == 'epic' else "direct"
-            print(f"✅ Successfully synced {jira_key} → {model.title()} {odoo_task_id} ({hours}h) [{source_info}]")
+            print(f"✅ Successfully synced {jira_key} → {model.title()} {odoo_task_id} for ({hours}h) [{source_info}]")
             return True
         else:
-            print(f"❌ Failed to create worklog for {jira_key}")
+            print(f"❌ Failed to create Odoo timesheet for JIRA Key: {jira_key}")
             return False
             
     except Exception as e:
@@ -123,7 +131,7 @@ def main():
             print("⚠️ No Tempo worklogs found.")
             return
         
-        print(f"✅ Found {len(tempo_worklogs)} Tempo worklogs")
+        print(f"✅ Successfully fetched {len(tempo_worklogs)} Tempo worklogs for selected time period")
         
         # Step 1.5: Enrich worklogs with JIRA data
         print("\n🔄 Enriching worklogs with JIRA issue data...")
@@ -134,9 +142,9 @@ def main():
             if enriched:
                 enriched_worklogs.append(enriched)
             else:
-                print(f"⚠️ Could not enrich worklog {worklog.get('tempoWorklogId', 'unknown')}")
+                print(f"⚠️ Could not enrich worklog {worklog.get('tempoWorklogId', 'unknown')}- skipping...")
         
-        print(f"✅ Enriched {len(enriched_worklogs)} worklogs with JIRA data")
+        print(f"✅ Successfully enriched {len(enriched_worklogs)} worklogs with JIRA issue data")
         
         # Step 2: Process each enriched worklog
         print("\n🔄 Processing worklogs...")
@@ -153,10 +161,10 @@ def main():
                 skip_count += 1
         
         # Summary
-        print(f"\n📊 SUMMARY: {sync_count} synced, {skip_count} skipped")
+        print(f"\n📊 SYNC SUMMARY: Synced: {sync_count}, Skipped: {skip_count} (out of {len(enriched_worklogs)})")
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Runtime error: {e}")
 
 def test_connections():
     """Test connections to Tempo, JIRA and Odoo"""
@@ -168,7 +176,7 @@ def test_connections():
     # Test Tempo
     worklogs = get_tempo_worklogs()
     if worklogs is not None and len(worklogs) >= 0:
-        print(f"✅ Tempo connection successful ({len(worklogs)} worklogs)")
+        print(f"✅ Tempo connection successful- ({len(worklogs)} worklogs retrieved)")
     else:
         print("❌ Tempo connection failed")
 

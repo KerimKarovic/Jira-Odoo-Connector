@@ -42,7 +42,7 @@ def get_issue_with_odoo_url(issue_key):
         odoo_url = fields.get('customfield_10134', '')
         
         if odoo_url:
-            print(f"🎯 Found Odoo URL for {issue_key}: {odoo_url}")
+            print(f"🎯 Odoo link found in issue {issue_key}: {odoo_url}")
             return {
                 'key': issue_key,
                 'odoo_url': odoo_url,
@@ -59,12 +59,12 @@ def get_issue_with_odoo_url(issue_key):
         
         if parent_epic:
             epic_key = parent_epic.get('key') if isinstance(parent_epic, dict) else str(parent_epic)
-            print(f"🔗 {issue_key} has parent Epic: {epic_key}")
+            print(f"🔗 Issue {issue_key} is under parent Epic: {epic_key}")
             
             # Get Epic details
             epic_data = get_epic_odoo_url(epic_key)
             if epic_data and epic_data.get('odoo_url'):
-                print(f"🎯 Found Odoo URL in Epic {epic_key}: {epic_data['odoo_url']}")
+                print(f"🎯 Extracted Odoo link from Epic {epic_key}: {epic_data['odoo_url']}")
                 return {
                     'key': issue_key,
                     'odoo_url': epic_data['odoo_url'],
@@ -74,11 +74,11 @@ def get_issue_with_odoo_url(issue_key):
                     'description': issue_title  # Use original issue title
                 }
         
-        print(f"⚠️ No Odoo URL found for {issue_key} or its Epic")
+        print(f"⚠️ No Odoo mapping found for Jira Issue ID: {issue_key} or its Epic")
         return None
             
     except Exception as e:
-        print(f"❌ Error fetching issue {issue_key}: {e}")
+        print(f"❌ Error fetching data for issue {issue_key}- {e}")
         return None
 
 def get_epic_odoo_url(epic_key):
@@ -109,7 +109,7 @@ def get_epic_odoo_url(epic_key):
         return None
         
     except Exception as e:
-        print(f"❌ Error fetching Epic {epic_key}: {e}")
+        print(f"❌ JIRA API error wile fetching Epic{epic_key}: {e}")
         return None
 
 def extract_odoo_task_id_from_url(odoo_url):
@@ -144,7 +144,7 @@ def extract_odoo_task_id_from_url(odoo_url):
         return task_id, model_type
         
     except (ValueError, IndexError) as e:
-        print(f"⚠️ Error parsing Odoo URL {odoo_url}: {e}")
+        print(f"⚠️ Malformed Odoo Url for  {odoo_url}- parsing failed with: {e}")
         return None, None
 
 def test_jira_connection():
@@ -157,13 +157,13 @@ def test_jira_connection():
         user_response.raise_for_status()
         current_user = user_response.json()
         
-        print(f"✅ Connected to JIRA as: {current_user.get('displayName')}")
+        print(f"✅ JIRA API authenticated as user:  {current_user.get('displayName')}")
         return True
         
     except requests.exceptions.RequestException as e:
-        print(f"❌ Error connecting to JIRA: {e}")
+        print(f"❌ Failed to authenticate/connect to JIRA:: {e}")
         return False
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print(f"❌ Generic error durnig JIRA session check: {e}")
         return False
 
