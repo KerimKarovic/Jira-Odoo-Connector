@@ -11,7 +11,7 @@ from datetime import datetime
 # Import our modules
 from tempo import get_tempo_worklogs, enrich_worklogs_with_issue_key
 from jira import get_issue_with_odoo_url, extract_odoo_task_id_from_url
-from odoo import create_worklog_entry, check_existing_worklogs_by_worklog_id, test_odoo_connection
+from odoo import create_timesheet_entry, check_existing_worklogs_by_worklog_id, test_odoo_connection
 
 def convert_seconds_to_hours(seconds):
     """Convert seconds to hours (float)"""
@@ -43,7 +43,7 @@ def sync_tempo_worklogs_to_odoo(worklog):
             print(f"⚠️ Skipping worklog without JIRA key")
             return False
         
-        print(f"🔄 Processing worklog  for {jira_key}")
+        print(f"🔄 Processing tempo worklog ID: {jira_key}")
         
         # Get issue details with Odoo URL (checks hierarchy)
         issue_data = get_issue_with_odoo_url(jira_key)
@@ -57,16 +57,16 @@ def sync_tempo_worklogs_to_odoo(worklog):
             print(f"❌ Could not extract task ID from URL: {issue_data['odoo_url']}")
             return False
         
-        # TODO check typo issues
+       
         # Show task source and model type
         task_source = issue_data.get('task_source', 'unknown')
-        model_name = "helpdesk ticket" if model == 'helpdesk.ticket' else "project task"
+        model = "helpdesk.ticket" if model == 'helpdesk.ticket' else "project.task"
         
         if task_source == 'epic':
             epic_key = issue_data.get('epic_key', 'Unknown')
-            print(f"🎯 Found Odoo {model_name} ID: {odoo_task_id} (via Epic {epic_key})")
+            print(f"🎯 Found Odoo {model} ID: {odoo_task_id} (via Epic {epic_key})")
         else:
-            print(f"🎯 Found Odoo {model_name} ID: {odoo_task_id} (direct)")
+            print(f"🎯 Found Odoo {model} ID: {odoo_task_id} (direct)")
         
         # Extract worklog details
         time_seconds = worklog.get('timeSpentSeconds', 0)
@@ -91,13 +91,13 @@ def sync_tempo_worklogs_to_odoo(worklog):
             print(f"🔗 Tempo Worklog ID: {tempo_worklog_id}")
         
         # Create worklog entry with model type
-        worklog_id = create_worklog_entry(
+        worklog_id = create_timesheet_entry(
             odoo_task_id, hours, description, date, author_name, tempo_worklog_id, model or 'project.task'
         )
         
         if worklog_id:
             source_info = f"via Epic {issue_data.get('epic_key')}" if task_source == 'epic' else "direct"
-            print(f"✅ Successfully synced {jira_key} → {model_name.title()} {odoo_task_id} ({hours}h) [{source_info}]")
+            print(f"✅ Successfully synced {jira_key} → {model.title()} {odoo_task_id} ({hours}h) [{source_info}]")
             return True
         else:
             print(f"❌ Failed to create worklog for {jira_key}")
@@ -108,7 +108,7 @@ def sync_tempo_worklogs_to_odoo(worklog):
        if issue is None:
            issue = {}
        jira_key = issue.get('key', 'Unknown')
-       print(f"Error proccesing worklog for {jira_key}")
+       print(f"Error processing worklog for {jira_key}")
        return False    
 def main():
     """Main function using Tempo API approach"""
