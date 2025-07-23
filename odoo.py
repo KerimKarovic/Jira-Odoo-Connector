@@ -42,6 +42,7 @@ def get_odoo_connection():
         print(f"❌ Error connecting to Odoo: {e}")
         return None, None, None
 
+# TODO rename to create_timesheet_entry
 def create_worklog_entry(task_id: int, hours: float, description: str, work_date: Optional[str] = None, jira_author: Optional[str] = None, tempo_worklog_id: Optional[str] = None, model_type: str = 'project.task') -> Optional[int]:
     """
     Create a worklog entry in Odoo.
@@ -80,6 +81,7 @@ def create_worklog_entry(task_id: int, hours: float, description: str, work_date
             task_name = task_data[0].get('name', 'Unknown Ticket')
             team_id_field = task_data[0].get('team_id')
             
+            # TODO check if team_id can be removed
             # Handle team_id which can be False, int, or [id, name] tuple
             team_id = None
             if isinstance(team_id_field, list) and len(team_id_field) > 0:
@@ -112,6 +114,7 @@ def create_worklog_entry(task_id: int, hours: float, description: str, work_date
             elif isinstance(project_id_field, int):
                 project_id = project_id_field
         
+        # TODO remove this
         # Enhanced description with JIRA author if provided
         enhanced_description = description
         if jira_author and jira_author != 'Unknown':
@@ -173,6 +176,7 @@ def check_existing_worklogs_by_worklog_id(tempo_worklog_id: Optional[str]) -> bo
         return False
     
     try:
+        # TODO performance improvements by more specific search
         existing = models.execute_kw(
             ODOO_DB, uid, ODOO_PASSWORD,
             'account.analytic.line', 'search_read',
@@ -180,6 +184,7 @@ def check_existing_worklogs_by_worklog_id(tempo_worklog_id: Optional[str]) -> bo
             {'fields': ['id', 'name', 'x_jira_worklog_id'], 'limit': 1}
         )
         
+        # TODO Check if existing and len(existing) > 0 is necessary?
         if existing and isinstance(existing, list) and len(existing) > 0:
             print(f"⚠️ Worklog already exists for Tempo worklog ID: {tempo_worklog_id}")
             return True

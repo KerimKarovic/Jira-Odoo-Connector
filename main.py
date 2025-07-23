@@ -57,6 +57,7 @@ def sync_tempo_worklogs_to_odoo(worklog):
             print(f"❌ Could not extract task ID from URL: {issue_data['odoo_url']}")
             return False
         
+        # TODO check typo issues
         # Show task source and model type
         task_source = issue_data.get('task_source', 'unknown')
         model_name = "helpdesk ticket" if model == 'helpdesk.ticket' else "project task"
@@ -126,7 +127,6 @@ def main():
         
         # Step 1.5: Enrich worklogs with JIRA data
         print("\n🔄 Enriching worklogs with JIRA issue data...")
-        from tempo import enrich_worklogs_with_issue_key
         
         enriched_worklogs = []
         for worklog in tempo_worklogs:
