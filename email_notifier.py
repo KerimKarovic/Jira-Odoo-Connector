@@ -7,9 +7,7 @@ import json
 import smtplib
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from functools import wraps
-import glob
 
 class EmailNotifier:
     def __init__(self):
@@ -111,136 +109,6 @@ JIRA-Odoo Sync System
             error_state.clear()
         self.save_error_state(error_state)
     
-    def send_weekly_report(self):
-        """Send weekly report every Friday with log analysis"""
-        if not self.is_configured():
-            return
-        
-        current_time = datetime.now()
-        if current_time.weekday() != 4:  # Friday = 4
-            return
-        
-        # Analyze last 7 days of logs
-        log_summary = self._analyze_recent_logs(days=7)
-        error_state = self.load_error_state()
-        
-        subject = f"{self.subject_prefix} 📊 Weekly Report - {current_time.strftime('%Y-%m-%d')}"
-        
-        # Build report
-        body = f"""
-📊 JIRA-ODOO SYNC - WEEKLY REPORT
-
-Report Period: {(current_time - timedelta(days=7)).strftime('%Y-%m-%d')} to {current_time.strftime('%Y-%m-%d')}
-
-=== SYNC STATISTICS ===
-• Total Syncs: {log_summary['total_syncs']}
-• Successful Creates: {log_summary['total_created']}
-• Skipped (No Odoo URL): {log_summary['total_skipped']}
-• Errors: {log_summary['total_errors']}
-• Duplicates Prevented: {log_summary['total_duplicates']}
-
-=== ACTIVE ISSUES ===
-"""
-        
-        if error_state:
-            body += f"⚠️ {len(error_state)} active error(s) requiring attention:\n"
-            for error_key, error_info in error_state.items():
-                body += f"• {error_key} (since {error_info['first_occurrence'][:10]}, count: {error_info['count']})\n"
-        else:
-            body += "✅ No active errors - system running smoothly\n"
-        
-        body += f"""
-
-=== RECENT ACTIVITY ===
-• Most Recent Sync: {log_summary['last_sync_time'] or 'No recent syncs'}
-• Average Sync Duration: {log_summary['avg_duration']:.1f}s
-• Most Processed JIRA Projects: {', '.join(log_summary['top_projects'][:3])}
-
-=== LOG FILES ANALYZED ===
-{chr(10).join(f'• {log}' for log in log_summary['log_files'][-5:])}
-
----
-JIRA-Odoo Sync System
-Weekly Report Generated: {current_time.strftime('%Y-%m-%d %H:%M:%S')}
-        """.strip()
-        
-        self._send_email(subject, body)
-    
-    def _analyze_recent_logs(self, days=7):
-        """Analyze recent log files for weekly report"""
-        cutoff_date = datetime.now() - timedelta(days=days)
-        log_pattern = "logs/sync_*.log"
-        log_files = glob.glob(log_pattern)
-        
-        summary = {
-            'total_syncs': 0,
-            'total_created': 0,
-            'total_skipped': 0,
-            'total_errors': 0,
-            'total_duplicates': 0,
-            'log_files': [],
-            'last_sync_time': None,
-            'durations': [],
-            'projects': []
-        }
-        
-        for log_file in sorted(log_files):
-            try:
-                # Extract date from filename
-                filename = os.path.basename(log_file)
-                date_str = filename.split('_')[1]  # sync_20250724_065528.log
-                log_date = datetime.strptime(date_str, '%Y%m%d')
-                
-                if log_date < cutoff_date:
-                    continue
-                
-                summary['log_files'].append(filename)
-                
-                with open(log_file, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    
-                    # Count sync events
-                    if 'CRON SYNC STARTED' in content:
-                        summary['total_syncs'] += 1
-                    
-                    # Extract final stats
-                    for line in content.split('\n'):
-                        if 'Sync completed:' in line:
-                            parts = line.split('Sync completed: ')[1]
-                            if 'created' in parts:
-                                created = int(parts.split(' created')[0])
-                                summary['total_created'] += created
-                            if 'skipped' in parts:
-                                skipped = int(parts.split(', ')[1].split(' skipped')[0])
-                                summary['total_skipped'] += skipped
-                            if 'errors' in parts:
-                                errors = int(parts.split(', ')[2].split(' errors')[0])
-                                summary['total_errors'] += errors
-                        
-                        if 'Duplicate worklog' in line:
-                            summary['total_duplicates'] += 1
-                        
-                        if 'Processing worklog: JIRA' in line:
-                            project = line.split('JIRA ')[1].split('-')[0]
-                            summary['projects'].append(project)
-                        
-                        if 'SYNC COMPLETED in' in line:
-                            duration = float(line.split('in ')[1].split(' seconds')[0])
-                            summary['durations'].append(duration)
-                            
-                            # Get timestamp for last sync
-                            timestamp = line.split(' - ')[0]
-                            summary['last_sync_time'] = timestamp
-                            
-            except Exception as e:
-                print(f"⚠️ Error analyzing log {log_file}: {e}")
-        
-        # Calculate averages
-        summary['avg_duration'] = sum(summary['durations']) / len(summary['durations']) if summary['durations'] else 0
-        summary['top_projects'] = list(set(summary['projects']))
-        
-        return summary
-    
     def _send_email(self, subject, body):
         """Send email via SMTP"""
         try:
@@ -280,4 +148,5 @@ def email_on_error(severity="normal"):
                 raise
         return wrapper
     return decorator
+
 
