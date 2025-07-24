@@ -171,7 +171,11 @@ def extract_odoo_task_id_from_url(odoo_url):
         return task_id, model_type
         
     except (ValueError, IndexError) as e:
-        print(f"⚠️ Malformed Odoo Url for  {odoo_url}- parsing failed with: {e}")
+        print(f"⚠️ Malformed Odoo URL: {odoo_url} - parsing failed with: {e}")
+        # Malformed URL - SEND email
+        from email_notifier import email_notifier
+        url_error = Exception(f"Malformed Odoo URL: {odoo_url}")
+        email_notifier.send_error_email(url_error, f"Malformed Odoo URL in JIRA issue", severity="normal")
         return None, None
 
 def test_jira_connection():

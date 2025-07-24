@@ -71,8 +71,11 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
             )
             
             if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-                # DATA issue - task doesn't exist, NO email
-                print(f"⚠️ Odoo {model_type} ID {task_id} not found - skipping worklog creation")
+                # DATA issue - task doesn't exist, SEND email
+                print(f"⚠️ Odoo {model_type} ID {task_id} not found - this indicates mapping issues")
+                from email_notifier import email_notifier
+                task_error = Exception(f"Odoo {model_type} ID {task_id} not found")
+                email_notifier.send_error_email(task_error, f"Odoo Task Not Found - {model_type} ID {task_id}", severity="normal")
                 return None
                 
             task_name = task_data[0].get('name', 'Unknown Ticket')
@@ -89,8 +92,11 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
             )
             
             if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-                # DATA issue - task doesn't exist, NO email
-                print(f"⚠️ Odoo {model_type} ID {task_id} not found - skipping worklog creation")
+                # DATA issue - task doesn't exist, SEND email
+                print(f"⚠️ Odoo {model_type} ID {task_id} not found - this indicates mapping issues")
+                from email_notifier import email_notifier
+                task_error = Exception(f"Odoo {model_type} ID {task_id} not found")
+                email_notifier.send_error_email(task_error, f"Odoo Task Not Found - {model_type} ID {task_id}", severity="normal")
                 return None
                 
             task_name = task_data[0].get('name', 'Unknown Task')
@@ -154,7 +160,12 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
         return None
     except Exception as e:
         print(f"⚠️ Error creating worklog for {model_type} ID={task_id}: {e}")
-        # DATA/permission issue - NO email
+        # Check if it's a permission error
+        error_msg = str(e).lower()
+        if any(keyword in error_msg for keyword in ['permission', 'access', 'denied', 'forbidden']):
+            # Permission issue - SEND email
+            from email_notifier import email_notifier
+            email_notifier.send_error_email(e, f"Odoo permission error during timesheet creation", severity="normal")
         return None
 
 def check_existing_worklogs_by_worklog_id(tempo_worklog_id: Optional[str]) -> bool:

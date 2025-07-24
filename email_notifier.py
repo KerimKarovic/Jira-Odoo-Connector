@@ -5,6 +5,8 @@ Email notification system for JIRA-Odoo sync errors
 import os
 import json
 import smtplib
+import glob
+import re
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from functools import wraps
@@ -88,7 +90,7 @@ JIRA-Odoo Sync System
             msg['From'] = self.from_email
             msg['To'] = self.to_email
             msg['Subject'] = subject
-          #TODO fix exception   prbs constructor method 
+            
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                 server.starttls()
                 server.login(self.from_email, self.password)
@@ -99,13 +101,8 @@ JIRA-Odoo Sync System
         except Exception as e:
             print(f"❌ Failed to send email: {e}")
             return False
-#TODO fix imports
     def _analyze_recent_logs(self, days=7):
         """Analyze recent log files for weekly reports"""
-        import glob
-        import re
-        from datetime import datetime, timedelta
-        
         # Get log files from the last N days
         cutoff_date = datetime.now() - timedelta(days=days)
         log_pattern = "logs/sync_*.log"
@@ -119,7 +116,7 @@ JIRA-Odoo Sync System
             'durations': [],
             'error_details': []
         }
-      #TODO dodaj mu main da   
+        
         for log_file in log_files:
             try:
                 # Extract date from filename (sync_YYYYMMDD_HHMMSS.log)
@@ -178,6 +175,9 @@ def email_on_error(severity="normal"):
                 raise
         return wrapper
     return decorator
+
+
+
 
 
 
