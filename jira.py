@@ -21,16 +21,21 @@ headers = {
 
 
 def get_issue_with_odoo_url(issue_key):
-    """Get JIRA issue details including Odoo URL from custom field or parent Epic"""
+    """Get JIRA issue - only email for system failures"""
     try:
         issue_url = f"{JIRA_URL}/rest/api/3/issue/{issue_key}"
         response = requests.get(issue_url, headers=headers, auth=auth)
         
         if response.status_code == 401:
-            # API authentication failure - send email
+            # AUTH failure - send email
             from email_notifier import email_notifier
-            auth_error = Exception(f"JIRA API authentication failed for issue {issue_key}")
+            auth_error = Exception(f"JIRA API authentication failed")
             email_notifier.send_error_email(auth_error, "JIRA API Authentication Failure", severity="critical")
+            return None
+        
+        if response.status_code == 404:
+            # DATA issue - issue doesn't exist, NO email
+            print(f"⚠️ JIRA issue {issue_key} not found (404) - skipping")
             return None
             
         response.raise_for_status()
@@ -80,14 +85,27 @@ def get_issue_with_odoo_url(issue_key):
         print(f"⚠️ No Odoo mapping found for Jira Issue ID: {issue_key} or its Epic")
         return None
             
+    except requests.exceptions.ConnectionError as e:
+        print(f"❌ Connection error fetching issue {issue_key}: {e}")
+        # CONNECTION failure - send email
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, f"JIRA API Connection Failure", severity="critical")
+        return None
+    except requests.exceptions.Timeout as e:
+        print(f"❌ Timeout error fetching issue {issue_key}: {e}")
+        # TIMEOUT failure - send email
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, f"JIRA API Timeout", severity="critical")
+        return None
     except requests.exceptions.RequestException as e:
-        print(f"❌ Error fetching data for issue {issue_key}- {e}")
+        print(f"❌ API error fetching issue {issue_key}: {e}")
         # API failure - send email
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, f"JIRA API Failure for issue {issue_key}", severity="critical")
+        email_notifier.send_error_email(e, f"JIRA API Request Failure", severity="critical")
         return None
     except Exception as e:
-        print(f"❌ Error fetching data for issue {issue_key}- {e}")
+        print(f"⚠️ Error fetching issue {issue_key}: {e}")
+        # DATA issue - NO email
         return None
 
 def get_epic_odoo_url(epic_key):

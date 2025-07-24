@@ -50,10 +50,9 @@ class EmailNotifier:
             print("⚠️ Email not configured - skipping notification")
             return
         
-        # Always send emails for any Exception - no 24h logic
+        # Send email immediately for every error - NO 24h logic
         current_time = datetime.now()
         
-        # Send email immediately for every error
         subject = f"{self.subject_prefix} {'🚨 CRITICAL' if severity == 'critical' else '⚠️'} ERROR - {type(error).__name__}"
         
         body = f"""
@@ -179,6 +178,8 @@ def email_on_error(severity="normal"):
                 raise
         return wrapper
     return decorator
+
+
 
 
 

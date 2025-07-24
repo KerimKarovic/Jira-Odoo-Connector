@@ -20,10 +20,7 @@ headers = {
 }
 
 def get_tempo_worklogs():
-    """
-    Fetch recent worklogs from Tempo API for ALL USERS
-    Returns: list of worklog dictionaries with issue data
-    """
+    """Fetch worklogs from Tempo API - only email for system failures"""
     try:
         print("🔍 Fetching worklogs from Tempo (ALL USERS)...")
         
@@ -50,9 +47,9 @@ def get_tempo_worklogs():
         
         if response.status_code == 401:
             print(f"❌ 401 Unauthorized: Invalid or expired Tempo API token")
-            # API failure - send email
+            # AUTH failure - send email
             from email_notifier import email_notifier
-            auth_error = Exception(f"Tempo API authentication failed - 401 Unauthorized")
+            auth_error = Exception("Tempo API authentication failed - 401 Unauthorized")
             email_notifier.send_error_email(auth_error, "Tempo API Authentication Failure", severity="critical")
             return []
         
@@ -64,15 +61,27 @@ def get_tempo_worklogs():
         print(f"✅ Retrieved {len(worklogs)} worklogs from Tempo API")
         return worklogs
         
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Fatal JSON/API error while retrieving Tempo worklogs: {e}")
-        # API failure - send email
+    except requests.exceptions.ConnectionError as e:
+        print(f"❌ Connection error during Tempo API fetch: {e}")
+        # CONNECTION failure - send email
         from email_notifier import email_notifier
         email_notifier.send_error_email(e, "Tempo API Connection Failure", severity="critical")
         return []
+    except requests.exceptions.Timeout as e:
+        print(f"❌ Timeout error during Tempo API fetch: {e}")
+        # TIMEOUT failure - send email
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, "Tempo API Timeout", severity="critical")
+        return []
+    except requests.exceptions.RequestException as e:
+        print(f"❌ API error while retrieving Tempo worklogs: {e}")
+        # OTHER API failures - send email
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, "Tempo API Request Failure", severity="critical")
+        return []
     except Exception as e:
-        print(f"❌ Connection error during Tempo API fetch {e}")
-        # API failure - send email  
+        print(f"❌ Unexpected error during Tempo API fetch: {e}")
+        # SYSTEM failure - send email  
         from email_notifier import email_notifier
         email_notifier.send_error_email(e, "Tempo API Unexpected Error", severity="critical")
         return []
@@ -80,12 +89,7 @@ def get_tempo_worklogs():
 
 
 def enrich_worklogs_with_issue_key(worklog):
-    """
-    Enrich worklog with JIRA issue key and author name
-    Args:
-        worklog: Raw worklog from Tempo API
-    Returns: Enriched worklog with issue key and author name
-    """
+    """Enrich worklog with JIRA issue key - NO emails for data issues"""
     try:
         from jira import JIRA_URL, auth, headers as jira_headers
         
@@ -98,7 +102,8 @@ def enrich_worklogs_with_issue_key(worklog):
             return worklog
             
         if not issue_id:
-            print("⚠️ No issue ID found in worklog")
+            # DATA issue - NO email, just log and skip
+            print("⚠️ No issue ID found in worklog - skipping")
             return None
         
         # Fetch issue details from JIRA
@@ -130,9 +135,22 @@ def enrich_worklogs_with_issue_key(worklog):
         
         return enriched_worklog
         
+    except requests.exceptions.ConnectionError as e:
+        print(f"❌ Connection error during worklog enrichment: {e}")
+        # CONNECTION failure - send email
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, "JIRA API Connection Failure during enrichment", severity="critical")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"❌ API error during worklog enrichment: {e}")
+        # API failure - send email
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, "JIRA API Failure during enrichment", severity="critical")
+        return None
     except Exception as e:
-        print(f"⚠️ Skipped worklog die to enrichment error: {e}")
-        return worklog  # Return original if enrichment fails
+        print(f"⚠️ Skipped worklog due to enrichment error: {e}")
+        # DATA issue - NO email, just skip
+        return None
 
 
 

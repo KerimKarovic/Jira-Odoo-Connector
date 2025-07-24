@@ -19,43 +19,39 @@ ODOO_PASSWORD = config["odoo"]["password"]
 WEBDEV_TEAM_EMPLOYEE_ID = 21
 
 def get_odoo_connection():
-    """
-    Establish connection to Odoo using XML-RPC.
-    Returns: (common, models, uid) tuple for API calls
-    """
+    """Establish Odoo connection - email for system failures only"""
     try:
         common = xmlrpc.client.ServerProxy(f'{ODOO_URL}/xmlrpc/2/common')
         models = xmlrpc.client.ServerProxy(f'{ODOO_URL}/xmlrpc/2/object')
         
-        # Authenticate
         uid = common.authenticate(ODOO_DB, ODOO_USERNAME, ODOO_PASSWORD, {})
         if not uid:
-            raise ValueError("Authentication failed")
+            # AUTH failure - send email
+            from email_notifier import email_notifier
+            auth_error = Exception("Odoo authentication failed - invalid credentials")
+            email_notifier.send_error_email(auth_error, "Odoo Authentication Failure", severity="critical")
+            print(f"❌ Authentication failed")
+            return None, None, None
             
-        print(f"✅ Connected to  XML-RPC API (User ID; {uid})")
+        print(f"✅ Connected to Odoo XML-RPC API (User ID: {uid})")
         return common, models, uid
         
-    except xmlrpc.client.Fault as e:
-        print(f"❌ XML-RPC exception while connecting to Odoo: {e}")
+    except ConnectionError as e:
+        print(f"❌ Connection error while connecting to Odoo: {e}")
+        # CONNECTION failure - send email
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, "Odoo Connection Failure", severity="critical")
         return None, None, None
     except Exception as e:
-        print(f"❌ Fatal connection error: Could not authenticate or reach Odoo: {e}")
+        print(f"❌ System error connecting to Odoo: {e}")
+        # SYSTEM failure - send email
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, "Odoo System Error", severity="critical")
         return None, None, None
 
 
 def create_timesheet_entry(task_id: int, hours: float, description: str, work_date: Optional[str] = None, jira_author: Optional[str] = None, tempo_worklog_id: Optional[str] = None, model_type: str = 'project.task') -> Optional[int]:
-    """
-    Create a worklog entry in Odoo.
-    Args:
-        task_id: Odoo task/ticket ID
-        hours: Time spent in hours (float)
-        description: Work description
-        work_date: Date of work (defaults to today)
-        jira_author: Original JIRA author name (optional)
-        tempo_worklog_id: Tempo worklog ID for duplicate detection (optional)
-        model_type: Odoo model type ('project.task' or 'helpdesk.ticket')
-    Returns: Created worklog ID or None
-    """
+    """Create timesheet - NO emails for data issues"""
     common, models, uid = get_odoo_connection()
     if not uid or not models:
         return None
@@ -75,7 +71,8 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
             )
             
             if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-                print(f"❌ Odoo helpdesk.ticket ID {task_id} not found- skipping worklog creation")
+                # DATA issue - task doesn't exist, NO email
+                print(f"⚠️ Odoo {model_type} ID {task_id} not found - skipping worklog creation")
                 return None
                 
             task_name = task_data[0].get('name', 'Unknown Ticket')
@@ -92,7 +89,8 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
             )
             
             if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-                print(f"❌ Odoo project.task ID {task_id} not found- skipping worklog creation")
+                # DATA issue - task doesn't exist, NO email
+                print(f"⚠️ Odoo {model_type} ID {task_id} not found - skipping worklog creation")
                 return None
                 
             task_name = task_data[0].get('name', 'Unknown Task')
@@ -144,11 +142,19 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
             print(f"✅ Worklog created successfully for task #{task_id} ({model_name}) with ID {worklog_id}")
             return worklog_id
         else:
-            print(f"❌ Unexpected return rype from Odoo worklog creation: {type(worklog_result)}")
+            # DATA issue - unexpected return type, NO email
+            print(f"⚠️ Unexpected return type from Odoo worklog creation: {type(worklog_result)}")
             return None
         
+    except ConnectionError as e:
+        print(f"❌ Connection error creating worklog for {model_type} ID={task_id}: {e}")
+        # CONNECTION failure - send email
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, f"Odoo connection error during timesheet creation", severity="critical")
+        return None
     except Exception as e:
-        print(f"❌ Exception while creating worklog for {model_type} ID={task_id}, user={jira_author}, date={work_date}: {e}")
+        print(f"⚠️ Error creating worklog for {model_type} ID={task_id}: {e}")
+        # DATA/permission issue - NO email
         return None
 
 def check_existing_worklogs_by_worklog_id(tempo_worklog_id: Optional[str]) -> bool:
