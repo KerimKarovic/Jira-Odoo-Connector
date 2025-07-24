@@ -12,11 +12,11 @@ from functools import wraps
 class EmailNotifier:
     def __init__(self):
         self.enabled = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
-        self.smtp_server = os.getenv("EMAIL_SMTP_SERVER", "")
+        self.smtp_server = os.getenv("EMAIL_SMTP_SERVER", "smtp.gmail.com")
         self.smtp_port = int(os.getenv("EMAIL_SMTP_PORT", "587"))
-        self.from_email = os.getenv("EMAIL_FROM", "")
-        self.password = os.getenv("EMAIL_PASSWORD", "")
-        self.to_email = os.getenv("EMAIL_TO", "")
+        self.from_email = os.getenv("EMAIL_FROM", "kerim.karovic3@gmail.com")
+        self.password = os.getenv("EMAIL_PASSWORD", "rohh owtu jynt uyvy")
+        self.to_email = os.getenv("EMAIL_TO", "k.karovic@kiratik")
         self.subject_prefix = os.getenv("EMAIL_SUBJECT_PREFIX", "[JIRA-SYNC]")
         
         os.makedirs("logs", exist_ok=True)
@@ -86,7 +86,7 @@ This error will be reported every 24 hours until resolved.
 JIRA-Odoo Sync System
             """.strip()
             
-            if self._send_email(subject, body):
+            if self.send_email(subject, body):
                 # Update error state
                 if error_key not in error_state:
                     error_state[error_key] = {
@@ -109,14 +109,14 @@ JIRA-Odoo Sync System
             error_state.clear()
         self.save_error_state(error_state)
     
-    def _send_email(self, subject, body):
+    def send_email(self, subject, body):
         """Send email via SMTP"""
         try:
             msg = MIMEText(body, 'plain', 'utf-8')
             msg['From'] = self.from_email
             msg['To'] = self.to_email
             msg['Subject'] = subject
-            
+          #TODO fix exception   prbs constructor method 
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                 server.starttls()
                 server.login(self.from_email, self.password)
@@ -127,7 +127,7 @@ JIRA-Odoo Sync System
         except Exception as e:
             print(f"❌ Failed to send email: {e}")
             return False
-
+#TODO fix imports
     def _analyze_recent_logs(self, days=7):
         """Analyze recent log files for weekly reports"""
         import glob
@@ -147,7 +147,7 @@ JIRA-Odoo Sync System
             'durations': [],
             'error_details': []
         }
-        
+      #TODO dodaj mu main da   
         for log_file in log_files:
             try:
                 # Extract date from filename (sync_YYYYMMDD_HHMMSS.log)
