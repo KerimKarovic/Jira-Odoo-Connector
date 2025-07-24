@@ -45,60 +45,33 @@ class EmailNotifier:
             print(f"⚠️ Could not save error state: {e}")
     
     def send_error_email(self, error, context=None, severity="normal"):
-        """Send error notification email with 24h repeat logic"""
+        """Send error notification email for ALL errors immediately"""
         if not self.is_configured():
             print("⚠️ Email not configured - skipping notification")
             return
         
-        error_key = f"{type(error).__name__}_{context or 'unknown'}"
+        # Always send emails for any Exception - no 24h logic
         current_time = datetime.now()
         
-        # Load error state
-        error_state = self.load_error_state()
+        # Send email immediately for every error
+        subject = f"{self.subject_prefix} {'🚨 CRITICAL' if severity == 'critical' else '⚠️'} ERROR - {type(error).__name__}"
         
-        # Check if we should send email (first time or 24h passed)
-        should_send = True
-        if error_key in error_state:
-            last_sent = datetime.fromisoformat(error_state[error_key]['last_sent'])
-            if (current_time - last_sent).total_seconds() < 24 * 3600:  # 24 hours
-                should_send = False
-                print(f"⏰ Error email for {error_key} already sent within 24h - skipping")
-        
-        if should_send:
-            subject = f"{self.subject_prefix} {'🚨 CRITICAL' if severity == 'critical' else '⚠️'} ERROR - {type(error).__name__}"
-            
-            repeat_info = ""
-            if error_key in error_state:
-                first_occurrence = error_state[error_key]['first_occurrence']
-                repeat_info = f"\n⚠️ RECURRING ERROR - First occurred: {first_occurrence}"
-            
-            body = f"""
+        body = f"""
 {'🚨 CRITICAL ERROR' if severity == 'critical' else '⚠️ ERROR DETECTED'}
 
 Time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}
 Error: {type(error).__name__}
 Message: {str(error)}
-Context: {context or 'None'}{repeat_info}
-
-This error will be reported every 24 hours until resolved.
+Context: {context or 'None'}
 
 ---
 JIRA-Odoo Sync System
-            """.strip()
-            
-            if self.send_email(subject, body):
-                # Update error state
-                if error_key not in error_state:
-                    error_state[error_key] = {
-                        'first_occurrence': current_time.isoformat(),
-                        'count': 1
-                    }
-                else:
-                    error_state[error_key]['count'] += 1
-                
-                error_state[error_key]['last_sent'] = current_time.isoformat()
-                error_state[error_key]['last_error'] = str(error)
-                self.save_error_state(error_state)
+        """.strip()
+        
+        if self.send_email(subject, body):
+            print(f"✅ Error email sent: {type(error).__name__}")
+        else:
+            print(f"❌ Failed to send error email: {type(error).__name__}")
     
     def clear_error_state(self, error_key=None):
         """Clear error state when issues are resolved"""
@@ -206,6 +179,8 @@ def email_on_error(severity="normal"):
                 raise
         return wrapper
     return decorator
+
+
 
 
 

@@ -49,9 +49,11 @@ def get_tempo_worklogs():
         response = requests.get(url, headers=headers, params=params)
         
         if response.status_code == 401:
-            print(f"❌ 41 Unauthorized: Invalid or expired Tempo API token")
-            print(f"🔑 Provided token prefix: {TEMPO_API_TOKEN[:10]}...")
-            print(f"📋 Ensure this token has 'View worklogs' premission enabled in Tempo")
+            print(f"❌ 401 Unauthorized: Invalid or expired Tempo API token")
+            # API failure - send email
+            from email_notifier import email_notifier
+            auth_error = Exception(f"Tempo API authentication failed - 401 Unauthorized")
+            email_notifier.send_error_email(auth_error, "Tempo API Authentication Failure", severity="critical")
             return []
         
         response.raise_for_status()
@@ -64,9 +66,15 @@ def get_tempo_worklogs():
         
     except requests.exceptions.RequestException as e:
         print(f"❌ Fatal JSON/API error while retrieving Tempo worklogs: {e}")
+        # API failure - send email
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, "Tempo API Connection Failure", severity="critical")
         return []
     except Exception as e:
         print(f"❌ Connection error during Tempo API fetch {e}")
+        # API failure - send email  
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, "Tempo API Unexpected Error", severity="critical")
         return []
 
 

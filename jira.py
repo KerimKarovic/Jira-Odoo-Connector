@@ -21,15 +21,18 @@ headers = {
 
 
 def get_issue_with_odoo_url(issue_key):
-    """
-    Get JIRA issue details including Odoo URL from custom field or parent Epic
-    Args:
-        issue_key: JIRA issue key (e.g., 'KDW-1384')
-    Returns: Issue data with Odoo URL, task source, and issue title or None
-    """
+    """Get JIRA issue details including Odoo URL from custom field or parent Epic"""
     try:
         issue_url = f"{JIRA_URL}/rest/api/3/issue/{issue_key}"
         response = requests.get(issue_url, headers=headers, auth=auth)
+        
+        if response.status_code == 401:
+            # API authentication failure - send email
+            from email_notifier import email_notifier
+            auth_error = Exception(f"JIRA API authentication failed for issue {issue_key}")
+            email_notifier.send_error_email(auth_error, "JIRA API Authentication Failure", severity="critical")
+            return None
+            
         response.raise_for_status()
         
         issue_data = response.json()
@@ -77,6 +80,12 @@ def get_issue_with_odoo_url(issue_key):
         print(f"⚠️ No Odoo mapping found for Jira Issue ID: {issue_key} or its Epic")
         return None
             
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error fetching data for issue {issue_key}- {e}")
+        # API failure - send email
+        from email_notifier import email_notifier
+        email_notifier.send_error_email(e, f"JIRA API Failure for issue {issue_key}", severity="critical")
+        return None
     except Exception as e:
         print(f"❌ Error fetching data for issue {issue_key}- {e}")
         return None
