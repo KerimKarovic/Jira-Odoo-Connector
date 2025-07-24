@@ -13,54 +13,44 @@ from utils import validate_config
 from email_notifier import email_notifier
 
 def run_cron_sync():
-    """
-    Run the sync process as a cron job with proper logging
-    """
-    # Setup logging with timestamp in filename
+    """Run sync with detailed logging"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_dir = "logs"
+    log_file = f"logs/sync_{timestamp}.log"
     
-    # Create logs directory if it doesn't exist
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    
-    # Configure logging
-    log_file = f"{log_dir}/sync_{timestamp}.log"
+    # Enhanced logging format
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - CRON - %(levelname)s - %(message)s',
+        format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.FileHandler(log_file, encoding='utf-8'),
             logging.StreamHandler()
         ]
     )
     
-    # Log start of sync
-    logging.info("Starting JIRA-Odoo sync via cron job")
+    logging.info("=== CRON SYNC STARTED ===")
+    logging.info(f"Log file: {log_file}")
     
     try:
-        # Validate configuration
         validate_config()
+        logging.info("Configuration validated successfully")
         
-        # Record start time
         start_time = datetime.now()
         logging.info(f"Sync started at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # Send weekly email if needed
-        email_notifier.send_weekly_health_report()
+        # Send weekly report if needed (Friday)
+        email_notifier.send_weekly_report()
+        
         # Run sync
         main()
         
-        # Calculate duration
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
-        logging.info(f"Sync completed in {duration:.2f} seconds")
+        logging.info(f"=== SYNC COMPLETED in {duration:.2f} seconds ===")
         
         return True
         
     except Exception as e:
-        email_notifier.log_error(e, {"source": "cron_sync", "timestamp": start_time.isoformat()}, severity="critical")
-        logging.error(f"Cron sync failed: {e}")
+        logging.error(f"CRITICAL: Cron sync failed - {e}")
         return False
     finally:
         logging.info("Cron job execution completed")
