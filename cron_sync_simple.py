@@ -37,9 +37,6 @@ def run_cron_sync():
         start_time = datetime.now()
         logging.info(f"Sync started at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # Send weekly report if needed (Friday)
-        email_notifier.send_weekly_report()
-        
         # Run sync
         main()
         

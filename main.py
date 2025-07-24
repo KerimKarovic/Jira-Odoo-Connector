@@ -23,9 +23,13 @@ def convert_seconds_to_hours(seconds):
 @email_on_error(severity="normal")
 def sync_tempo_worklogs_to_odoo(worklog):
     """Sync Tempo worklogs to Odoo with detailed logging"""
+    tempo_worklog_id = worklog.get('tempoWorklogId')
+    jira_key = None  # Initialize early for error handling
+    
     try:
-        tempo_worklog_id = worklog.get('tempoWorklogId')
         issue = worklog.get('issue', {})
+        if issue is None:
+            issue = {}
         jira_key = issue.get('key')
         
         logging.info(f"Processing worklog: JIRA {jira_key}, Tempo ID: {tempo_worklog_id}")
@@ -67,7 +71,7 @@ def sync_tempo_worklogs_to_odoo(worklog):
             return False
             
     except Exception as e:
-        logging.error(f"ERROR: Exception processing worklog {jira_key}: {e}")
+        logging.error(f"ERROR: Exception processing worklog {jira_key or 'unknown'}: {e}")
         return False
 
 @email_on_error(severity="critical")

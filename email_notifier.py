@@ -128,6 +128,64 @@ JIRA-Odoo Sync System
             print(f"❌ Failed to send email: {e}")
             return False
 
+    def _analyze_recent_logs(self, days=7):
+        """Analyze recent log files for weekly reports"""
+        import glob
+        import re
+        from datetime import datetime, timedelta
+        
+        # Get log files from the last N days
+        cutoff_date = datetime.now() - timedelta(days=days)
+        log_pattern = "logs/sync_*.log"
+        log_files = glob.glob(log_pattern)
+        
+        summary = {
+            'total_syncs': 0,
+            'total_created': 0,
+            'total_skipped': 0,
+            'total_errors': 0,
+            'durations': [],
+            'error_details': []
+        }
+        
+        for log_file in log_files:
+            try:
+                # Extract date from filename (sync_YYYYMMDD_HHMMSS.log)
+                filename = os.path.basename(log_file)
+                date_match = re.search(r'sync_(\d{8})_\d{6}\.log', filename)
+                if date_match:
+                    file_date = datetime.strptime(date_match.group(1), '%Y%m%d')
+                    if file_date < cutoff_date:
+                        continue
+                
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    
+                    # Count sync sessions
+                    if 'SYNC STARTED' in content:
+                        summary['total_syncs'] += 1
+                    
+                    # Extract sync results
+                    result_match = re.search(r'Sync completed: (\d+) created, (\d+) skipped, (\d+) errors', content)
+                    if result_match:
+                        summary['total_created'] += int(result_match.group(1))
+                        summary['total_skipped'] += int(result_match.group(2))
+                        summary['total_errors'] += int(result_match.group(3))
+                    
+                    # Extract duration
+                    duration_match = re.search(r'COMPLETED in ([\d.]+) seconds', content)
+                    if duration_match:
+                        summary['durations'].append(float(duration_match.group(1)))
+                    
+                    # Extract error details
+                    error_lines = [line for line in content.split('\n') if 'ERROR' in line]
+                    summary['error_details'].extend(error_lines[:5])  # Limit to 5 errors per file
+                    
+            except Exception as e:
+                print(f"⚠️ Could not analyze log file {log_file}: {e}")
+        
+        return summary
+
 # Global instance
 email_notifier = EmailNotifier()
 
@@ -148,5 +206,6 @@ def email_on_error(severity="normal"):
                 raise
         return wrapper
     return decorator
+
 
 
