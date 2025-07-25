@@ -30,14 +30,14 @@ def get_odoo_connection():
             from email_notifier import email_notifier
             auth_error = Exception("Odoo authentication failed - invalid credentials")
             email_notifier.send_error_email(auth_error, "Odoo Authentication Failure", severity="critical")
-            print(f"❌ Authentication failed")
+            print("❌ Odoo auth failed")
             return None, None, None
             
-        print(f"✅ Connected to Odoo XML-RPC API (User ID: {uid})")
+        print(f"✅ Odoo connected (UID: {uid})")
         return common, models, uid
         
     except ConnectionError as e:
-        print(f"❌ Connection error while connecting to Odoo: {e}")
+        print("❌ Odoo connection failed")
         # CONNECTION failure - send email
         from email_notifier import email_notifier
         email_notifier.send_error_email(e, "Odoo Connection Failure", severity="critical")
@@ -72,15 +72,12 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
             
             if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
                 # DATA issue - task doesn't exist, SEND email
-                print(f"⚠️ Odoo {model_type} ID {task_id} not found - this indicates mapping issues")
                 from email_notifier import email_notifier
                 task_error = Exception(f"Odoo {model_type} ID {task_id} not found")
                 email_notifier.send_error_email(task_error, f"Odoo Task Not Found - {model_type} ID {task_id}", severity="normal")
                 return None
                 
             task_name = task_data[0].get('name', 'Unknown Ticket')
-            
-            print(f"✅ Verified helpdesk ticket ID {task_id} exists: {task_name}")
             
         else:
             # For project tasks (existing logic)
@@ -145,7 +142,7 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
         if isinstance(worklog_result, int):
             worklog_id = worklog_result
             model_name = "helpdesk ticket" if model_type == 'helpdesk.ticket' else "project task"
-            print(f"✅ Worklog created successfully for task #{task_id} ({model_name}) with ID {worklog_id}")
+            print(f"✅ Worklog created: #{worklog_id}")
             return worklog_id
         else:
             # DATA issue - unexpected return type, NO email
@@ -187,13 +184,12 @@ def check_existing_worklogs_by_worklog_id(tempo_worklog_id: Optional[str]) -> bo
         )
         
         if existing_ids:
-            print(f"⚠️ Duplicate worklog detected- tempo worklog ID {tempo_worklog_id} already exists in Odoo")
+            print(f"⚠️ Duplicate worklog: {tempo_worklog_id}")
             return True
         
         return False
         
     except Exception as e:
-        print(f"❌ Error querying Odoo for existing worklog ID {tempo_worklog_id}: {e}")
         return False
 
 def test_odoo_connection():
@@ -208,7 +204,7 @@ def test_odoo_connection():
         print("❌ Odoo connection failed")
         return False
 
-def get_recent_tasks(limit=10):
+def get_recent_tasks(limit=25):
     """
     Get recent tasks from Odoo with JIRA URLs
     Returns: List of task dictionaries
@@ -235,14 +231,7 @@ def get_recent_tasks(limit=10):
             return []
 
     except Exception as e:
-        print(f"❌ Exception while retrieving recent Odoo tasks: {e}")
+        print(f"❌ Error fetching recent tasks from Odoo: {e}")
         return []
 
-# ========== DEMO RUN ==========
-if __name__ == "__main__":
-    tasks = get_recent_tasks()
-    for task in tasks:
-        jira_url = task.get('x_studio_jira_url', '')
-        task_name = task.get('name', 'No name')
-        print(f"📝 Recent Odoo task : #{task['id']} | Title : {task_name} | Linked JIRA: {jira_url}")
 

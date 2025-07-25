@@ -8,10 +8,10 @@ import logging
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv()
 
-# ========== ENVIRONMENT VARIABLES ==========
+# Environment variables
 JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
 JIRA_USER = os.getenv("JIRA_USER")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
@@ -24,7 +24,7 @@ ODOO_PASSWORD = os.getenv("ODOO_PASSWORD")
 LOOKBACK_HOURS = int(os.getenv("LOOKBACK_HOURS", "24"))
 TEMPO_API_TOKEN = os.getenv("TEMPO_API_TOKEN")
 
-# ========== CONFIG OBJECT ==========
+# Configuration object
 config = {
     "jira": {
         "base_url": JIRA_BASE_URL,
@@ -59,11 +59,11 @@ def validate_config():
 
 def setup_logging(log_file=None):
     """Configure logging for the application"""
-    # Create logs directory if it doesn't exist
+    # Create logs directory
     if not os.path.exists("logs"):
         os.makedirs("logs")
     
-    # Use provided log file or default
+    # Use provided log file or generate default
     if not log_file:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_file = f"logs/sync_{timestamp}.log"
@@ -77,5 +77,5 @@ def setup_logging(log_file=None):
         ]
     )
 
-# Call validation on import
+# Validate configuration on import
 validate_config()

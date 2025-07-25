@@ -16,9 +16,9 @@ class EmailNotifier:
         self.enabled = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
         self.smtp_server = os.getenv("EMAIL_SMTP_SERVER", "smtp.gmail.com")
         self.smtp_port = int(os.getenv("EMAIL_SMTP_PORT", "587"))
-        self.from_email = os.getenv("EMAIL_FROM", "kerim.karovic3@gmail.com")
-        self.password = os.getenv("EMAIL_PASSWORD", "rohh owtu jynt uyvy")
-        self.to_email = os.getenv("EMAIL_TO", "k.karovic@kiratik")
+        self.from_email = os.getenv("EMAIL_FROM")
+        self.password = os.getenv("EMAIL_PASSWORD")
+        self.to_email = os.getenv("EMAIL_TO")
         self.subject_prefix = os.getenv("EMAIL_SUBJECT_PREFIX", "[JIRA-SYNC]")
         
         os.makedirs("logs", exist_ok=True)
@@ -70,9 +70,9 @@ JIRA-Odoo Sync System
         """.strip()
         
         if self.send_email(subject, body):
-            print(f"✅ Error email sent: {type(error).__name__}")
+            print("✅ Email sent")
         else:
-            print(f"❌ Failed to send error email: {type(error).__name__}")
+            print("❌ Email failed")
     
     def clear_error_state(self, error_key=None):
         """Clear error state when issues are resolved"""
@@ -85,18 +85,25 @@ JIRA-Odoo Sync System
     
     def send_email(self, subject, body):
         """Send email via SMTP"""
+        if not self.to_email:
+            raise ValueError("Email recipient not configured")
+            
         try:
             msg = MIMEText(body, 'plain', 'utf-8')
+            if not self.from_email:
+                raise ValueError("Email sender not configured")
             msg['From'] = self.from_email
             msg['To'] = self.to_email
             msg['Subject'] = subject
             
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                 server.starttls()
+                if not self.from_email or not self.password:
+                    raise ValueError("Email credentials not configured")
                 server.login(self.from_email, self.password)
                 server.send_message(msg)
             
-            print(f"✅ Email sent: {subject}")
+            print("✅ Email sent")
             return True
         except Exception as e:
             print(f"❌ Failed to send email: {e}")
@@ -176,8 +183,19 @@ def email_on_error(severity="normal"):
         return wrapper
     return decorator
 
+def test_email_system():
+    """Test email notification system"""
+    try:
+        test_error = Exception("Test error for email system")
+        email_notifier.send_error_email(test_error, "Email system test", severity="normal")
+        print("✅ Email test completed - check your inbox")
+        return True
+    except Exception as e:
+        print(f"❌ Email test failed: {e}")
+        return False
 
-
+if __name__ == "__main__":
+    test_email_system()
 
 
 

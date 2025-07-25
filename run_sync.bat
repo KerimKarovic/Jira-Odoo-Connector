@@ -4,8 +4,8 @@
 :: Set UTF-8 code page for proper emoji display
 chcp 65001 > nul 2>&1
 
-:: Change to the project directory (explicit path)
-cd /d "C:\Users\KerimKarovic\jira_odoo_sync"
+:: Change to the project directory (update this path for your deployment)
+cd /d "%~dp0"
 
 :: Set environment variables for Python
 set PYTHONIOENCODING=utf-8
@@ -13,7 +13,6 @@ set PYTHONUNBUFFERED=1
 
 :: Activate virtual environment
 if exist "venv\Scripts\activate.bat" (
-    echo Activating virtual environment...
     call venv\Scripts\activate.bat
 )
 
@@ -29,7 +28,7 @@ echo Sync completed with exit code: %ERRORLEVEL%
 
 :: Deactivate virtual environment if it was activated
 if exist "venv\Scripts\activate.bat" (
-    deactivate
+    call deactivate
 )
 
 :: Keep window open for debugging (remove for production)

@@ -138,3 +138,29 @@ For containerized deployment:
    ```
    docker logs jira-odoo-sync
    ```
+
+## Email Notifications
+
+The system can send email notifications for critical errors and system failures.
+
+### Email Setup
+
+Add these variables to your `.env` file:
+
+```
+EMAIL_ENABLED=true
+EMAIL_SMTP_SERVER=smtp.gmail.com
+EMAIL_SMTP_PORT=587
+EMAIL_FROM=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+EMAIL_TO=admin@yourcompany.com
+EMAIL_SUBJECT_PREFIX=[JIRA-SYNC]
+```
+
+**Note**: For Gmail, use an App Password instead of your regular password.
+
+### Test Email System
+
+```bash
+python email_notifier.py
+```
