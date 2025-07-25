@@ -43,7 +43,7 @@ def get_tempo_worklogs():
         if response.status_code == 401:
             from email_notifier import email_notifier
             auth_error = Exception("Tempo API authentication failed - 401 Unauthorized")
-            email_notifier.send_error_email(auth_error, "Tempo API Authentication Failure", severity="critical")
+            email_notifier.collect_error(auth_error, "Tempo API Authentication Failure", severity="critical")
             return []
         
         response.raise_for_status()
@@ -56,19 +56,19 @@ def get_tempo_worklogs():
         
     except requests.exceptions.ConnectionError as e:
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, "Tempo API Connection Failure", severity="critical")
+        email_notifier.collect_error(e, "Tempo API Connection Failure", severity="critical")
         return []
     except requests.exceptions.Timeout as e:
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, "Tempo API Timeout", severity="critical")
+        email_notifier.collect_error(e, "Tempo API Timeout", severity="critical")
         return []
     except requests.exceptions.RequestException as e:
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, "Tempo API Request Failure", severity="critical")
+        email_notifier.collect_error(e, "Tempo API Request Failure", severity="critical")
         return []
     except Exception as e:
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, "Tempo API Unexpected Error", severity="critical")
+        email_notifier.collect_error(e, "Tempo API Unexpected Error", severity="critical")
         return []
 
 
@@ -122,12 +122,12 @@ def enrich_worklogs_with_issue_key(worklog):
     except requests.exceptions.ConnectionError as e:
         print(f"❌ Connection error during worklog enrichment: {e}")
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, "JIRA API Connection Failure during enrichment", severity="critical")
+        email_notifier.collect_error(e, "JIRA API Connection Failure during enrichment", severity="critical")
         return None
     except requests.exceptions.RequestException as e:
         print(f"❌ API error during worklog enrichment: {e}")
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, "JIRA API Failure during enrichment", severity="critical")
+        email_notifier.collect_error(e, "JIRA API Failure during enrichment", severity="critical")
         return None
     except Exception as e:
         print(f"⚠️ Skipped worklog due to enrichment error: {e}")

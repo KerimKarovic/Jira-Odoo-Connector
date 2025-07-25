@@ -74,7 +74,8 @@ def sync_tempo_worklogs_to_odoo(worklog):
             
     except Exception as e:
         logging.error(f"ERROR: System exception processing worklog {jira_key}: {e}")
-        email_notifier.send_error_email(e, f"System failure processing worklog", severity="critical")
+        # Collect error instead of sending immediately
+        email_notifier.collect_error(e, f"System failure processing worklog {jira_key}", severity="critical")
         return False
 
 @email_on_error(severity="critical")
@@ -83,6 +84,9 @@ def main():
     setup_logging()
     start_time = datetime.now()
     logging.info(f"SYNC STARTED at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # Start email session
+    email_notifier.start_sync_session()
     
     try:
         # Fetch and enrich worklogs
@@ -109,14 +113,27 @@ def main():
             except Exception as e:
                 error_count += 1
                 logging.error(f"Error processing worklog: {e}")
+                # Collect error instead of sending immediately
+                email_notifier.collect_error(e, f"Processing worklog {worklog.get('issue', {}).get('key', 'unknown')}", "normal")
         
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
         logging.info(f"Sync completed: {sync_count} created, {skip_count} skipped, {error_count} errors")
         logging.info(f"SYNC COMPLETED in {duration:.2f} seconds")
         
+        # Send consolidated email with sync stats
+        sync_stats = {
+            'created': sync_count,
+            'skipped': skip_count, 
+            'errors': error_count,
+            'duration': duration
+        }
+        email_notifier.send_sync_summary_email(sync_stats)
+        
     except Exception as e:
         logging.error(f"Critical error in main sync: {e}")
+        # Send immediate critical error email
+        email_notifier.send_critical_error_immediate(e, "Main sync function failure")
         raise
 
 def test_connections():

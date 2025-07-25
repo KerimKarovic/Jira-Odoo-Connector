@@ -28,7 +28,7 @@ def get_issue_with_odoo_url(issue_key):
         if response.status_code == 401:
             from email_notifier import email_notifier
             auth_error = Exception("JIRA API authentication failed")
-            email_notifier.send_error_email(auth_error, "JIRA API Authentication Failure", severity="critical")
+            email_notifier.collect_error(auth_error, "JIRA API Authentication Failure", severity="critical")
             return None
         
         # Handle missing issue
@@ -76,17 +76,17 @@ def get_issue_with_odoo_url(issue_key):
     except requests.exceptions.ConnectionError as e:
         print(f"❌ Connection error fetching issue {issue_key}: {e}")
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, "JIRA API Connection Failure", severity="critical")
+        email_notifier.collect_error(e, f"JIRA API Connection Failure for {issue_key}", severity="critical")
         return None
     except requests.exceptions.Timeout as e:
         print(f"❌ Timeout error fetching issue {issue_key}: {e}")
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, "JIRA API Timeout", severity="critical")
+        email_notifier.collect_error(e, f"JIRA API Timeout for {issue_key}", severity="critical")
         return None
     except requests.exceptions.RequestException as e:
         print(f"❌ API error fetching issue {issue_key}: {e}")
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, "JIRA API Request Failure", severity="critical")
+        email_notifier.collect_error(e, f"JIRA API Request Failure for {issue_key}", severity="critical")
         return None
     except Exception as e:
         print(f"⚠️ Error fetching issue {issue_key}: {e}")
@@ -143,7 +143,7 @@ def extract_odoo_task_id_from_url(odoo_url):
     except (ValueError, IndexError) as e:
         from email_notifier import email_notifier
         url_error = Exception(f"Malformed Odoo URL: {odoo_url}")
-        email_notifier.send_error_email(url_error, "Malformed Odoo URL in JIRA issue", severity="normal")
+        email_notifier.collect_error(url_error, "Malformed Odoo URL in JIRA issue", severity="normal")
         return None, None
 
 def test_jira_connection():

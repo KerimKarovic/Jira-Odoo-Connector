@@ -19,17 +19,17 @@ ODOO_PASSWORD = config["odoo"]["password"]
 WEBDEV_TEAM_EMPLOYEE_ID = 21
 
 def get_odoo_connection():
-    """Establish Odoo connection - email for system failures only"""
+    """Establish Odoo connection - collect errors for batch email"""
     try:
         common = xmlrpc.client.ServerProxy(f'{ODOO_URL}/xmlrpc/2/common')
         models = xmlrpc.client.ServerProxy(f'{ODOO_URL}/xmlrpc/2/object')
         
         uid = common.authenticate(ODOO_DB, ODOO_USERNAME, ODOO_PASSWORD, {})
         if not uid:
-            # AUTH failure - send email
+            # AUTH failure - collect error
             from email_notifier import email_notifier
             auth_error = Exception("Odoo authentication failed - invalid credentials")
-            email_notifier.send_error_email(auth_error, "Odoo Authentication Failure", severity="critical")
+            email_notifier.collect_error(auth_error, "Odoo Authentication Failure", severity="critical")
             print("❌ Odoo auth failed")
             return None, None, None
             
@@ -38,20 +38,20 @@ def get_odoo_connection():
         
     except ConnectionError as e:
         print("❌ Odoo connection failed")
-        # CONNECTION failure - send email
+        # CONNECTION failure - collect error
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, "Odoo Connection Failure", severity="critical")
+        email_notifier.collect_error(e, "Odoo Connection Failure", severity="critical")
         return None, None, None
     except Exception as e:
         print(f"❌ System error connecting to Odoo: {e}")
-        # SYSTEM failure - send email
+        # SYSTEM failure - collect error
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, "Odoo System Error", severity="critical")
+        email_notifier.collect_error(e, "Odoo System Error", severity="critical")
         return None, None, None
 
 
 def create_timesheet_entry(task_id: int, hours: float, description: str, work_date: Optional[str] = None, jira_author: Optional[str] = None, tempo_worklog_id: Optional[str] = None, model_type: str = 'project.task') -> Optional[int]:
-    """Create timesheet - NO emails for data issues"""
+    """Create timesheet - collect errors for batch email"""
     common, models, uid = get_odoo_connection()
     if not uid or not models:
         return None
@@ -71,10 +71,10 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
             )
             
             if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-                # DATA issue - task doesn't exist, SEND email
+                # DATA issue - task doesn't exist, collect error
                 from email_notifier import email_notifier
                 task_error = Exception(f"Odoo {model_type} ID {task_id} not found")
-                email_notifier.send_error_email(task_error, f"Odoo Task Not Found - {model_type} ID {task_id}", severity="normal")
+                email_notifier.collect_error(task_error, f"Odoo Task Not Found - {model_type} ID {task_id}", severity="normal")
                 return None
                 
             task_name = task_data[0].get('name', 'Unknown Ticket')
@@ -89,11 +89,11 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
             )
             
             if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-                # DATA issue - task doesn't exist, SEND email
+                # DATA issue - task doesn't exist, collect error
                 print(f"⚠️ Odoo {model_type} ID {task_id} not found - this indicates mapping issues")
                 from email_notifier import email_notifier
                 task_error = Exception(f"Odoo {model_type} ID {task_id} not found")
-                email_notifier.send_error_email(task_error, f"Odoo Task Not Found - {model_type} ID {task_id}", severity="normal")
+                email_notifier.collect_error(task_error, f"Odoo Task Not Found - {model_type} ID {task_id}", severity="normal")
                 return None
                 
             task_name = task_data[0].get('name', 'Unknown Task')
@@ -151,18 +151,18 @@ def create_timesheet_entry(task_id: int, hours: float, description: str, work_da
         
     except ConnectionError as e:
         print(f"❌ Connection error creating worklog for {model_type} ID={task_id}: {e}")
-        # CONNECTION failure - send email
+        # CONNECTION failure - collect error
         from email_notifier import email_notifier
-        email_notifier.send_error_email(e, f"Odoo connection error during timesheet creation", severity="critical")
+        email_notifier.collect_error(e, f"Odoo connection error during timesheet creation", severity="critical")
         return None
     except Exception as e:
         print(f"⚠️ Error creating worklog for {model_type} ID={task_id}: {e}")
         # Check if it's a permission error
         error_msg = str(e).lower()
         if any(keyword in error_msg for keyword in ['permission', 'access', 'denied', 'forbidden']):
-            # Permission issue - SEND email
+            # Permission issue - collect error
             from email_notifier import email_notifier
-            email_notifier.send_error_email(e, f"Odoo permission error during timesheet creation", severity="normal")
+            email_notifier.collect_error(e, f"Odoo permission error during timesheet creation", severity="normal")
         return None
 
 def check_existing_worklogs_by_worklog_id(tempo_worklog_id: Optional[str]) -> bool:
