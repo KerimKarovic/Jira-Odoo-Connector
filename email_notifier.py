@@ -107,26 +107,49 @@ class EmailNotifier:
         
         self.sync_errors = []
     
-    def send_critical_error_immediate(self, error, context=None):
-        """Send immediate email for critical system failures"""
+    def send_critical_error_immediate(self, error, context=None, log_file_path=None):
+        """Send immediate email for critical system failures with full log"""
         if not self.is_configured():
             return
         
         subject = f"{self.subject_prefix} 🚨 CRITICAL SYSTEM FAILURE"
-        body = f"""🚨 CRITICAL SYSTEM FAILURE - SYNC CANNOT CONTINUE
-
-ERROR: {type(error).__name__}
-MESSAGE: {str(error)}
-CONTEXT: {context or 'System failure'}
-TIME: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-IMMEDIATE ACTION REQUIRED:
-• Check system connectivity and API credentials
-• Review logs for additional details
-• Restart sync after resolving issues"""
         
-        if self.send_email(subject, body):
-            print("✅ Critical error email sent immediately")
+        # Build basic error info
+        body_parts = [
+            "🚨 CRITICAL SYSTEM FAILURE - SYNC CANNOT CONTINUE",
+            "",
+            f"ERROR: {type(error).__name__}",
+            f"MESSAGE: {str(error)}",
+            f"CONTEXT: {context or 'System failure'}",
+            f"TIME: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            "",
+            "IMMEDIATE ACTION REQUIRED:",
+            "• Check system connectivity and API credentials",
+            "• Review logs for additional details",
+            "• Restart sync after resolving issues"
+        ]
+        
+        # Add full log content for critical errors
+        if log_file_path and os.path.exists(log_file_path):
+            try:
+                with open(log_file_path, 'r', encoding='utf-8') as f:
+                    log_content = f.read()
+                
+                body_parts.extend([
+                    "",
+                    "=" * 50,
+                    "FULL SYNC LOG (for debugging):",
+                    "=" * 50,
+                    log_content
+                ])
+            except Exception as e:
+                body_parts.extend([
+                    "",
+                    f"⚠️ Could not read log file: {e}"
+                ])
+        
+        if self.send_email(subject, "\n".join(body_parts)):
+            print("✅ Critical error email sent immediately (with full log)")
     
     def send_email(self, subject, body):
         """Send email via SMTP"""
@@ -190,6 +213,7 @@ def test_email_system():
 
 if __name__ == "__main__":
     test_email_system()
+
 
 
 

@@ -98,9 +98,13 @@ class SyncSession:
         from email_notifier import email_notifier
         
         if exc_type:
-            # Critical error occurred
+            # Critical error occurred - include full log
             logging.error(f"CRITICAL: Sync session failed: {exc_val}")
-            email_notifier.send_critical_error_immediate(exc_val, "Sync session failure")
+            email_notifier.send_critical_error_immediate(
+                exc_val, 
+                "Sync session failure", 
+                log_file_path=self.log_file  # Pass log file path
+            )
         else:
             # Normal completion
             duration = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0

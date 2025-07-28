@@ -112,7 +112,11 @@ def main():
                 except Exception as e:
                     error_count += 1
                     logging.error(f"Error processing worklog: {e}")
-                    email_notifier.collect_error(e, f"Processing worklog {worklog.get('issue', {}).get('key', 'unknown')}", "normal")
+                    # For critical errors in main loop, also pass log file
+                    if "critical" in str(e).lower():
+                        email_notifier.send_critical_error_immediate(e, f"Critical processing error", log_file_path="current_log.log")
+                    else:
+                        email_notifier.collect_error(e, f"Processing worklog {worklog.get('issue', {}).get('key', 'unknown')}", "normal")
             
             logging.info(f"Sync completed: {sync_count} created, {skip_count} skipped, {error_count} errors")
             
