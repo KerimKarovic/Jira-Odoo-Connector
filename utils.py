@@ -50,6 +50,10 @@ def setup_logging(log_file=None):
     if not os.path.exists("logs"):
         os.makedirs("logs")
     
+    # Clear existing handlers to prevent conflicts
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    
     # Use provided log file or generate default
     if not log_file:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -61,8 +65,69 @@ def setup_logging(log_file=None):
         handlers=[
             logging.FileHandler(log_file, encoding='utf-8'),
             logging.StreamHandler()
-        ]
+        ],
+        force=True  # Force reconfiguration
     )
 
 # Validate configuration on import
 validate_config()
+
+class SyncSession:
+    def __init__(self):
+        self.log_file = None
+        self.start_time = None
+    
+    def __enter__(self):
+        """Setup logging and email session"""
+        self.start_time = datetime.now()
+        timestamp = self.start_time.strftime("%Y%m%d_%H%M%S")
+        self.log_file = f"logs/sync_{timestamp}.log"
+        
+        # Setup logging once
+        self.setup_session_logging()
+        
+        # Start email session
+        from email_notifier import email_notifier
+        email_notifier.start_sync_session()
+        
+        logging.info(f"=== SYNC SESSION STARTED at {self.start_time.strftime('%Y-%m-%d %H:%M:%S')} ===")
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Cleanup and send final emails"""
+        from email_notifier import email_notifier
+        
+        if exc_type:
+            # Critical error occurred
+            logging.error(f"CRITICAL: Sync session failed: {exc_val}")
+            email_notifier.send_critical_error_immediate(exc_val, "Sync session failure")
+        else:
+            # Normal completion
+            duration = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
+            logging.info(f"=== SYNC SESSION COMPLETED in {duration:.2f} seconds ===")
+        
+        return False  # Don't suppress exceptions
+    
+    def setup_session_logging(self):
+        """Setup logging for this session only"""
+        if not os.path.exists("logs"):
+            os.makedirs("logs")
+        
+        # Ensure log_file is set
+        if not self.log_file:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.log_file = f"logs/sync_{timestamp}.log"
+        
+        # Clear existing handlers
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+        
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(self.log_file, encoding='utf-8'),
+                logging.StreamHandler()
+            ],
+            force=True
+        )

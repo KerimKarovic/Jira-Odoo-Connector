@@ -18,6 +18,12 @@ class EmailNotifier:
         self.to_email = os.getenv("EMAIL_TO")
         self.subject_prefix = os.getenv("EMAIL_SUBJECT_PREFIX", "[JIRA-SYNC]")
         
+        # Debug print to see what we're getting
+        print(f"DEBUG - EMAIL_FROM: '{self.from_email}'")
+        print(f"DEBUG - EMAIL_PASSWORD: {'SET' if self.password else 'NOT SET'}")
+        print(f"DEBUG - EMAIL_TO: '{self.to_email}'")
+        print(f"DEBUG - EMAIL_ENABLED: '{self.enabled}'")
+        
         os.makedirs("logs", exist_ok=True)
         self.sync_errors = []
         self.sync_start_time = None
@@ -62,7 +68,7 @@ class EmailNotifier:
         severity_indicator = "🚨 CRITICAL" if critical_count > 0 else "⚠️"
         subject = f"{self.subject_prefix} {severity_indicator} Sync Errors - {quick_summary}"
         
-        # Build email body
+        # Build email body (same as your first email format)
         body_parts = [
             "🚨 CRITICAL ERRORS DETECTED" if critical_count > 0 else "⚠️ ERRORS DETECTED IN JIRA-ODOO SYNC",
             "",
@@ -125,16 +131,19 @@ IMMEDIATE ACTION REQUIRED:
     def send_email(self, subject, body):
         """Send email via SMTP"""
         try:
-            msg = MIMEText(body, 'plain', 'utf-8')
-            if not self.from_email or not self.password or not self.to_email:
+            if not self.is_configured():
                 raise ValueError("Email credentials not configured")
             
-            msg['From'] = self.from_email
+            msg = MIMEText(body, 'plain', 'utf-8')
+            msg['From'] = self.from_email or ""
             msg['To'] = self.to_email or ""
             msg['Subject'] = subject
             
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                 server.starttls()
+                if not self.from_email or not self.password:
+                    raise ValueError("Email credentials (from_email and password) are required")
+                
                 server.login(self.from_email, self.password)
                 server.send_message(msg)
             
