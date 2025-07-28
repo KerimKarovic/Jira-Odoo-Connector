@@ -27,9 +27,8 @@ This project synchronizes worklogs(timesheets) from tempo(JIRA) into Odoo, allow
 ├── jira.py                   # JIRA issue fetching and parsing
 ├── odoo.py                   # Odoo connection and timesheet logging
 ├── utils.py                  # Configuration, logging, and helpers
-├── cron_sync_simple.py       # Windows-compatible cron script
-├── run_sync.bat              # Windows Task Scheduler batch file
-├── install_windows.bat       # Windows installation script
+├── cron_sync.py              # Linux/Unix dron script
+├── email.notifier.py         # Email notification system 
 ├── requirements.txt          # Python dependencies
 ├── .env.template             # Template for .env config
 └── README.md                 # This file
@@ -37,13 +36,22 @@ This project synchronizes worklogs(timesheets) from tempo(JIRA) into Odoo, allow
 🚀 Features
 
 -Syncs tempo worklogs from Jirra to Odoo 
+
 -Extracts Odoo task IDs from Jira issue URLs
+
 -Avoids duplication using Tempo Worklog ID
+
 -Logs time to Web Development Team in Odoo
--Fully testable with 30+ Pytest cases
--Supports Docker deployment for easy setup 
+
+-Fully testable with 30+ Pytest cases 
+
 -Supports .env configuration
--Supports Windows Task Scheduler automation
+
+-Smart email notifications with batch error collection
+
+-Consolitated error reporting with sync statistics
+
+-Critical vs normal error classification
 
 🔧 Setup Instructions
 
@@ -94,50 +102,33 @@ run_sync.bat # Run with Windows batch file
 
 -Make sure custom fields (x_jira_worklog_id) exist in Odoo.
 
-## Automated Deployment
+-**Email not working**: Ensure 'EMAIL_ENABLED=true' and all email credentials are set in '.env'.
+Test with  'python email_notifier.py' .
 
-### Windows Task Scheduler Setup
+-**No email recieved**: Check id sync completed successfully (no errors = no emails). Review 'logs/' directory for sync activity.
 
-For automated syncing on Windows:
-
-1. Run the `install_windows.bat` script to set up the environment
-2. Test the sync manually with `run_sync.bat`
-3. Open Windows Task Scheduler:
-   - Create Basic Task: "JIRA-Odoo Sync"
-   - Trigger: Daily (or your preferred schedule)
-   - Action: Start a program
-   - Program/script: `C:\path\to\jira_odoo_sync\run_sync.bat`
-   - Start in: `C:\path\to\jira_odoo_sync`
+-**Cron job not running**: Verify cron service is active with 'sudo systemctl status cron'. Check cron logs with 'sudo frep CRON /var/log/syslog'.
 
 ### Linux/Unix Cron Setup
 
-For Linux/Unix systems, set up a cron job:
+For Linux/Unix systems, set up a cron job for a daily sync at midnight:
 
-```
+'''bash
+crontab -e
+'''
+Add this line:
+'''
 0 * * * * cd /path/to/jira-odoo-sync && /path/to/python cron_sync.py
 ```
+Verify the cron job:
+'''bash
+crontab -l
+'''
 
-### Docker Deployment
-
-For containerized deployment:
-
-1. Build the Docker image:
-   ```
-   docker build -t jira-odoo-sync .
-   ```
-
-2. Run the container:
-   ```
-   docker run -d --name jira-odoo-sync \
-     -v $(pwd)/logs:/app/logs \
-     -v $(pwd)/.env:/app/.env \
-     jira-odoo-sync
-   ```
-
-3. Check logs:
-   ```
-   docker logs jira-odoo-sync
-   ```
+Monitor sync logs:
+'''bash
+tail -f logs/cron_sync_*.log
+'''
 
 ## Email Notifications
 
@@ -158,9 +149,3 @@ EMAIL_SUBJECT_PREFIX=[JIRA-SYNC]
 ```
 
 **Note**: For Gmail, use an App Password instead of your regular password.
-
-### Test Email System
-
-```bash
-python email_notifier.py
-```
