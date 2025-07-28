@@ -137,7 +137,6 @@ The system can send email notifications for critical errors and system failures.
 ### Email Setup
 
 Add these variables to your `.env` file:
-
 ```
 EMAIL_ENABLED=true
 EMAIL_SMTP_SERVER=smtp.gmail.com
