@@ -147,21 +147,21 @@ def extract_odoo_task_id_from_url(odoo_url):
         return None, None
 
 def test_jira_connection():
-    """Test JIRA connection and return status"""
-    print("🔧 Testing JIRA connection...")
+    """Test JIRA API connection"""
     try:
-        # Test with a simple API call
-        test_url = f"{JIRA_URL}/rest/api/3/myself"
-        response = requests.get(test_url, headers=headers, auth=auth)
+        print("🔍 Testing connection to JIRA...")
         
-        if response.status_code == 200:
-            print("✅ JIRA connection successful")
-            return True
-        else:
-            print("❌ JIRA connection failed")
-            return False
-            
+        user_url = f"{JIRA_URL}/rest/api/3/myself"
+        user_response = requests.get(user_url, headers=headers, auth=auth)
+        user_response.raise_for_status()
+        
+        current_user = user_response.json()
+        print(f"✅ JIRA connected")
+        return True
+        
+    except requests.exceptions.RequestException as e:
+        print(f"❌ JIRA API failed: {e}")
+        return False
     except Exception as e:
-        print(f"❌ JIRA connection failed: {e}")
         return False
 

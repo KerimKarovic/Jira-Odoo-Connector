@@ -5,6 +5,7 @@ JIRA to Odoo Worklog Sync via Tempo
 Main script that syncs Tempo worklogs to Odoo
 """
 
+import math
 import sys
 import logging
 from datetime import datetime
@@ -16,7 +17,7 @@ from email_notifier import email_notifier, email_on_error
 
 def convert_seconds_to_hours(seconds):
     hours = seconds / 3600
-    return round(hours * 4) / 4
+    return math.ceil(hours * 4) / 4
 
 def sync_tempo_worklogs_to_odoo(worklog):
     """Sync single Tempo worklog to Odoo"""
