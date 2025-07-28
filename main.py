@@ -15,8 +15,8 @@ from odoo import create_timesheet_entry, check_existing_worklogs_by_worklog_id, 
 from email_notifier import email_notifier, email_on_error
 
 def convert_seconds_to_hours(seconds):
-    """Convert seconds to hours (float)"""
-    return round(seconds / 3600, 2)
+    hours = seconds / 3600
+    return round(hours * 4) / 4
 
 def sync_tempo_worklogs_to_odoo(worklog):
     """Sync single Tempo worklog to Odoo"""
