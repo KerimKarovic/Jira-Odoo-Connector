@@ -204,34 +204,6 @@ def test_odoo_connection():
         print("❌ Odoo connection failed")
         return False
 
-def get_recent_tasks(limit=25):
-    """
-    Get recent tasks from Odoo with JIRA URLs
-    Returns: List of task dictionaries
-    """
-    common, models, uid = get_odoo_connection()
-    if not uid or not models:
-        return []
-
-    try:
-        # Search for tasks with JIRA URLs
-        tasks = models.execute_kw(
-            ODOO_DB, uid, ODOO_PASSWORD,
-            'project.task', 'search_read',
-            [[('x_studio_jira_url', '!=', False)]],
-            {'fields': ['id', 'name', 'x_studio_jira_url'], 'limit': limit, 'order': 'id desc'}
-        )
-
-        # Ensure we always return a list
-        if isinstance(tasks, list):
-            return tasks
-        else:
-            print(f"⚠️Warning: Unexpected task query result type: {type(tasks)}- expected list")
-
-            return []
-
-    except Exception as e:
-        print(f"❌ Error fetching recent tasks from Odoo: {e}")
-        return []
+# Remove get_recent_tasks() function completely - it's never called
 
 

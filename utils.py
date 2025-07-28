@@ -11,37 +11,24 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Environment variables
-JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
-JIRA_USER = os.getenv("JIRA_USER")
-JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
-
-ODOO_URL = os.getenv("ODOO_URL")
-ODOO_DB = os.getenv("ODOO_DB")
-ODOO_USERNAME = os.getenv("ODOO_USERNAME")
-ODOO_PASSWORD = os.getenv("ODOO_PASSWORD")
-
-LOOKBACK_HOURS = int(os.getenv("LOOKBACK_HOURS", "24"))
-TEMPO_API_TOKEN = os.getenv("TEMPO_API_TOKEN")
-
 # Configuration object
 config = {
     "jira": {
-        "base_url": JIRA_BASE_URL,
-        "user": JIRA_USER,
-        "api_token": JIRA_API_TOKEN
+        "base_url": os.getenv("JIRA_BASE_URL"),
+        "user": os.getenv("JIRA_USER"),
+        "api_token": os.getenv("JIRA_API_TOKEN")
     },
     "tempo": {
-        "api_token": TEMPO_API_TOKEN
+        "api_token": os.getenv("TEMPO_API_TOKEN")
     },
     "odoo": {
-        "url": ODOO_URL,
-        "db": ODOO_DB,
-        "username": ODOO_USERNAME,
-        "password": ODOO_PASSWORD
+        "url": os.getenv("ODOO_URL"),
+        "db": os.getenv("ODOO_DB"),
+        "username": os.getenv("ODOO_USERNAME"),
+        "password": os.getenv("ODOO_PASSWORD")
     },
     "sync": {
-        "lookback_hours": LOOKBACK_HOURS
+        "lookback_hours": int(os.getenv("LOOKBACK_HOURS", "24"))
     }
 }
 

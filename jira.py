@@ -146,22 +146,5 @@ def extract_odoo_task_id_from_url(odoo_url):
         email_notifier.collect_error(url_error, "Malformed Odoo URL in JIRA issue", severity="normal")
         return None, None
 
-def test_jira_connection():
-    """Test JIRA API connection"""
-    try:
-        print("🔍 Testing connection to JIRA...")
-        
-        user_url = f"{JIRA_URL}/rest/api/3/myself"
-        user_response = requests.get(user_url, headers=headers, auth=auth)
-        user_response.raise_for_status()
-        
-        current_user = user_response.json()
-        print(f"✅ JIRA connected")
-        return True
-        
-    except requests.exceptions.RequestException as e:
-        print(f"❌ JIRA API failed: {e}")
-        return False
-    except Exception as e:
-        return False
+# test_jira_connection() function removed - it's never called
 
