@@ -18,12 +18,6 @@ class EmailNotifier:
         self.to_email = os.getenv("EMAIL_TO")
         self.subject_prefix = os.getenv("EMAIL_SUBJECT_PREFIX", "[JIRA-SYNC]")
         
-        # Debug print to see what we're getting
-        print(f"DEBUG - EMAIL_FROM: '{self.from_email}'")
-        print(f"DEBUG - EMAIL_PASSWORD: {'SET' if self.password else 'NOT SET'}")
-        print(f"DEBUG - EMAIL_TO: '{self.to_email}'")
-        print(f"DEBUG - EMAIL_ENABLED: '{self.enabled}'")
-        
         os.makedirs("logs", exist_ok=True)
         self.sync_errors = []
         self.sync_start_time = None
@@ -68,7 +62,7 @@ class EmailNotifier:
         severity_indicator = "🚨 CRITICAL" if critical_count > 0 else "⚠️"
         subject = f"{self.subject_prefix} {severity_indicator} Sync Errors - {quick_summary}"
         
-        # Build email body (same as your first email format)
+        # Build email body
         body_parts = [
             "🚨 CRITICAL ERRORS DETECTED" if critical_count > 0 else "⚠️ ERRORS DETECTED IN JIRA-ODOO SYNC",
             "",
@@ -174,7 +168,6 @@ class EmailNotifier:
         except Exception as e:
             print(f"❌ Failed to send email: {e}")
             return False
-
 # Global instance
 email_notifier = EmailNotifier()
 
@@ -213,10 +206,4 @@ def test_email_system():
 
 if __name__ == "__main__":
     test_email_system()
-
-
-
-
-
-
 

@@ -10,8 +10,8 @@ from typing import Optional
 from utils import config
 from email_notifier import email_notifier
 
-# ========== CONFIG VALUES ==========
-ODOO_URL = config["odoo"]["url"].rstrip('/')  # Remove trailing slash
+# Configuration
+ODOO_URL = config["odoo"]["url"].rstrip('/')
 ODOO_DB = config["odoo"]["db"]
 ODOO_USERNAME = config["odoo"]["username"]
 ODOO_PASSWORD = config["odoo"]["password"]

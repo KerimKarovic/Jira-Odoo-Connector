@@ -7,8 +7,9 @@ Main script that syncs Tempo worklogs to Odoo
 
 import sys
 import logging
+import math
 from datetime import datetime
-from utils import SyncSession, setup_logging
+from utils import SyncSession
 from tempo import get_tempo_worklogs, enrich_worklogs_with_issue_key
 from jira import get_issue_with_odoo_url, extract_odoo_task_id_from_url
 from odoo import create_timesheet_entry, check_existing_worklogs_by_worklog_id, test_odoo_connection
@@ -19,7 +20,6 @@ def convert_seconds_to_hours(seconds):
     if seconds <= 0:
         return 0.0
     hours = seconds / 3600
-    import math
     return round(math.ceil(hours * 4) / 4, 2)
 
 
@@ -79,7 +79,6 @@ def sync_tempo_worklogs_to_odoo(worklog):
             
     except Exception as e:
         logging.error(f"ERROR: System exception processing worklog {jira_key}: {e}")
-        # Collect error instead of sending immediately
         email_notifier.collect_error(e, f"System failure processing worklog {jira_key}", severity="critical")
         return False
 
@@ -87,51 +86,37 @@ def sync_tempo_worklogs_to_odoo(worklog):
 def main():
     """Main synchronization function"""
     with SyncSession():
-        try:
-            # Fetch and enrich worklogs
-            tempo_worklogs = get_tempo_worklogs()
-            logging.info(f"Fetched {len(tempo_worklogs)} worklogs from Tempo")
-            
-            enriched_worklogs = []
-            for worklog in tempo_worklogs:
-                enriched = enrich_worklogs_with_issue_key(worklog)
-                if enriched:
-                    enriched_worklogs.append(enriched)
-            
-            logging.info(f"Enriched {len(enriched_worklogs)} worklogs with JIRA data")
-            
-            # Process worklogs
-            sync_count = skip_count = error_count = 0
-            
-            for worklog in enriched_worklogs:
-                try:
-                    if sync_tempo_worklogs_to_odoo(worklog):
-                        sync_count += 1
-                    else:
-                        skip_count += 1
-                except Exception as e:
-                    error_count += 1
-                    logging.error(f"Error processing worklog: {e}")
-                    # For critical errors in main loop, also pass log file
-                    if "critical" in str(e).lower():
-                        email_notifier.send_critical_error_immediate(e, f"Critical processing error", log_file_path="current_log.log")
-                    else:
-                        email_notifier.collect_error(e, f"Processing worklog {worklog.get('issue', {}).get('key', 'unknown')}", "normal")
-            
-            logging.info(f"Sync completed: {sync_count} created, {skip_count} skipped, {error_count} errors")
-            
-            # Send consolidated email with sync stats
-            sync_stats = {
-                'created': sync_count,
-                'skipped': skip_count, 
-                'errors': error_count,
-                'duration': 0  # Will be calculated in __exit__
-            }
-            email_notifier.send_sync_summary_email(sync_stats)
-            
-        except Exception as e:
-            logging.error(f"Critical error in main sync: {e}")
-            raise  # Let context manager handle it
+        # Fetch and enrich worklogs
+        tempo_worklogs = get_tempo_worklogs()
+        logging.info(f"Fetched {len(tempo_worklogs)} worklogs from Tempo")
+        
+        enriched_worklogs = []
+        for worklog in tempo_worklogs:
+            enriched = enrich_worklogs_with_issue_key(worklog)
+            if enriched:
+                enriched_worklogs.append(enriched)
+        
+        logging.info(f"Enriched {len(enriched_worklogs)} worklogs with JIRA data")
+        
+        # Process worklogs
+        sync_count = skip_count = error_count = 0
+        
+        for worklog in enriched_worklogs:
+            if sync_tempo_worklogs_to_odoo(worklog):
+                sync_count += 1
+            else:
+                skip_count += 1
+        
+        logging.info(f"Sync completed: {sync_count} created, {skip_count} skipped, {error_count} errors")
+        
+        # Send consolidated email with sync stats
+        sync_stats = {
+            'created': sync_count,
+            'skipped': skip_count, 
+            'errors': error_count,
+            'duration': 0  # Will be calculated in __exit__
+        }
+        email_notifier.send_sync_summary_email(sync_stats)
 
 def test_connections():
     """Test connections to all external services"""
@@ -149,7 +134,7 @@ def test_connections():
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--test":
-        test_connections()  # No logging setup needed
+        test_connections()
     else:
         main()
 

@@ -5,6 +5,7 @@ Handles fetching JIRA issues and extracting Odoo URLs with Epic hierarchy suppor
 
 import requests
 from utils import config
+from email_notifier import email_notifier
 
 # Configuration
 JIRA_URL = config["jira"]["base_url"]
@@ -26,7 +27,6 @@ def get_issue_with_odoo_url(issue_key):
         
         # Handle authentication failure
         if response.status_code == 401:
-            from email_notifier import email_notifier
             auth_error = Exception("JIRA API authentication failed")
             email_notifier.collect_error(auth_error, "JIRA API Authentication Failure", severity="critical")
             return None
@@ -75,21 +75,19 @@ def get_issue_with_odoo_url(issue_key):
             
     except requests.exceptions.ConnectionError as e:
         print(f"❌ Connection error fetching issue {issue_key}: {e}")
-        from email_notifier import email_notifier
         email_notifier.collect_error(e, f"JIRA API Connection Failure for {issue_key}", severity="critical")
         return None
     except requests.exceptions.Timeout as e:
         print(f"❌ Timeout error fetching issue {issue_key}: {e}")
-        from email_notifier import email_notifier
         email_notifier.collect_error(e, f"JIRA API Timeout for {issue_key}", severity="critical")
         return None
     except requests.exceptions.RequestException as e:
         print(f"❌ API error fetching issue {issue_key}: {e}")
-        from email_notifier import email_notifier
         email_notifier.collect_error(e, f"JIRA API Request Failure for {issue_key}", severity="critical")
         return None
     except Exception as e:
         print(f"⚠️ Error fetching issue {issue_key}: {e}")
+        email_notifier.collect_error(e, f"Unexpected error fetching {issue_key}", severity="normal")
         return None
 
 def get_epic_odoo_url(epic_key):
@@ -114,6 +112,7 @@ def get_epic_odoo_url(epic_key):
         
     except Exception as e:
         print(f"❌ Epic fetch failed: {epic_key}")
+        email_notifier.collect_error(e, f"Epic fetch failure for {epic_key}", severity="normal")
         return None
 
 def extract_odoo_task_id_from_url(odoo_url):
@@ -141,7 +140,6 @@ def extract_odoo_task_id_from_url(odoo_url):
         return task_id, model_type
         
     except (ValueError, IndexError) as e:
-        from email_notifier import email_notifier
         url_error = Exception(f"Malformed Odoo URL: {odoo_url}")
         email_notifier.collect_error(url_error, "Malformed Odoo URL in JIRA issue", severity="normal")
         return None, None
@@ -163,5 +161,6 @@ def test_jira_connection():
         print(f"❌ JIRA API failed: {e}")
         return False
     except Exception as e:
+        print(f"❌ JIRA connection error: {e}")
         return False
 
