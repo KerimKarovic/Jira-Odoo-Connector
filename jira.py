@@ -33,7 +33,6 @@ def get_issue_with_odoo_url(issue_key):
         
         # Handle missing issue
         if response.status_code == 404:
-            print(f"⚠️ Issue {issue_key} not found")
             return None
             
         response.raise_for_status()
@@ -45,7 +44,6 @@ def get_issue_with_odoo_url(issue_key):
         # Check for direct Odoo URL
         odoo_url = fields.get('customfield_10134', '')
         if odoo_url:
-            print(f"🎯 Odoo link found: {issue_key}")
             return {
                 'key': issue_key,
                 'odoo_url': odoo_url,
@@ -70,23 +68,18 @@ def get_issue_with_odoo_url(issue_key):
                     'description': issue_title
                 }
         
-        print(f"⚠️ No Odoo mapping: {issue_key}")
         return None
             
     except requests.exceptions.ConnectionError as e:
-        print(f"❌ Connection error fetching issue {issue_key}: {e}")
         email_notifier.collect_error(e, f"JIRA API Connection Failure for {issue_key}", severity="critical")
         return None
     except requests.exceptions.Timeout as e:
-        print(f"❌ Timeout error fetching issue {issue_key}: {e}")
         email_notifier.collect_error(e, f"JIRA API Timeout for {issue_key}", severity="critical")
         return None
     except requests.exceptions.RequestException as e:
-        print(f"❌ API error fetching issue {issue_key}: {e}")
         email_notifier.collect_error(e, f"JIRA API Request Failure for {issue_key}", severity="critical")
         return None
     except Exception as e:
-        print(f"⚠️ Error fetching issue {issue_key}: {e}")
         email_notifier.collect_error(e, f"Unexpected error fetching {issue_key}", severity="normal")
         return None
 
@@ -111,7 +104,6 @@ def get_epic_odoo_url(epic_key):
         return None
         
     except Exception as e:
-        print(f"❌ Epic fetch failed: {epic_key}")
         email_notifier.collect_error(e, f"Epic fetch failure for {epic_key}", severity="normal")
         return None
 
@@ -147,20 +139,15 @@ def extract_odoo_task_id_from_url(odoo_url):
 def test_jira_connection():
     """Test JIRA API connection"""
     try:
-        print("🔍 Testing connection to JIRA...")
-        
         user_url = f"{JIRA_URL}/rest/api/3/myself"
         user_response = requests.get(user_url, headers=headers, auth=auth)
         user_response.raise_for_status()
         
         current_user = user_response.json()
-        print(f"✅ JIRA connected")
         return True
         
     except requests.exceptions.RequestException as e:
-        print(f"❌ JIRA API failed: {e}")
         return False
     except Exception as e:
-        print(f"❌ JIRA connection error: {e}")
         return False
 

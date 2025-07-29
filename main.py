@@ -60,7 +60,6 @@ def sync_tempo_worklogs_to_odoo(worklog):
             hours, 
             issue_data.get('summary', f'Work on {jira_key}'),
             worklog.get('startDate'), 
-            worklog.get('author', {}).get('displayName'),
             tempo_worklog_id, 
             model or 'project.task'
         )

@@ -14,8 +14,11 @@ def main():
     """Main cron execution function"""
     try:
         # Import after path setup
-        from utils import validate_config
+        from utils import validate_config, cleanup_old_logs
         from main import main as sync_main
+        
+        # Clean up old logs first
+        cleanup_old_logs()
         
         # Validate configuration
         validate_config()
@@ -35,4 +38,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

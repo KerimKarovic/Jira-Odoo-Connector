@@ -5,7 +5,8 @@ Handles environment variables, logging, and validation
 
 import os
 import logging
-from datetime import datetime
+import glob
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -47,6 +48,27 @@ def validate_config():
 # Validate configuration on import
 validate_config()
 
+def cleanup_old_logs(days_to_keep=7):
+    """Remove log files older than specified days"""
+    if not os.path.exists("logs"):
+        return
+    
+    cutoff_date = datetime.now() - timedelta(days=days_to_keep)
+    log_files = glob.glob("logs/*.log")
+    
+    deleted_count = 0
+    for log_file in log_files:
+        try:
+            file_time = datetime.fromtimestamp(os.path.getmtime(log_file))
+            if file_time < cutoff_date:
+                os.remove(log_file)
+                deleted_count += 1
+        except OSError:
+            continue
+    
+    if deleted_count > 0:
+        logging.info(f"Cleaned up {deleted_count} old log files (older than {days_to_keep} days)")
+
 class SyncSession:
     def __init__(self):
         self.log_file = None
@@ -57,6 +79,9 @@ class SyncSession:
         self.start_time = datetime.now()
         timestamp = self.start_time.strftime("%Y%m%d_%H%M%S")
         self.log_file = f"logs/sync_{timestamp}.log"
+        
+        # Clean up old logs before starting new session
+        cleanup_old_logs()
         
         self.setup_session_logging()
         

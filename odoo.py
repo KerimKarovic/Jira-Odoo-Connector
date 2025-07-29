@@ -41,12 +41,10 @@ class OdooClient:
                 email_notifier.collect_error(auth_error, "Odoo Authentication Failure", severity="critical")
                 return False
                 
-            print(f"✅ Odoo connected (UID: {self.uid})")
             self.connected = True
             return True
             
         except ConnectionError as e:
-            print("❌ Odoo connection failed")
             email_notifier.collect_error(e, "Odoo Connection Failure", severity="critical")
             return False
         except Exception as e:
@@ -54,7 +52,7 @@ class OdooClient:
             return False
     
     def create_timesheet_entry(self, task_id: int, hours: float, description: str,
-                               work_date: Optional[str] = None, jira_author: Optional[str] = None,
+                               work_date: Optional[str] = None,
                                tempo_worklog_id: Optional[str] = None, model_type: str = 'project.task') -> Optional[int]:
         """Create timesheet entry"""
         if not self.connect():
@@ -97,7 +95,6 @@ class OdooClient:
                 )
                 
                 if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-                    print(f"⚠️ Odoo {model_type} ID {task_id} not found - this indicates mapping issues")
                     task_error = Exception(f"Odoo {model_type} ID {task_id} not found")
                     email_notifier.collect_error(task_error, f"Odoo Task Not Found - {model_type} ID {task_id}", severity="normal")
                     return None
@@ -135,18 +132,14 @@ class OdooClient:
             # Handle the result which should be an integer ID
             if isinstance(worklog_result, int):
                 worklog_id = worklog_result
-                print(f"✅ Worklog created: #{worklog_id}")
                 return worklog_id
             else:
-                print(f"⚠️ Unexpected return type from Odoo worklog creation: {type(worklog_result)}")
                 return None
             
         except ConnectionError as e:
-            print(f"❌ Connection error creating worklog for {model_type} ID={task_id}: {e}")
             email_notifier.collect_error(e, f"Odoo connection error during timesheet creation", severity="critical")
             return None
         except Exception as e:
-            print(f"⚠️ Error creating worklog for {model_type} ID={task_id}: {e}")
             # Check if it's a permission error
             error_msg = str(e).lower()
             if any(keyword in error_msg for keyword in ['permission', 'access', 'denied', 'forbidden']):
@@ -169,7 +162,6 @@ class OdooClient:
             )
             
             if existing_ids:
-                print(f"⚠️ Duplicate worklog: {tempo_worklog_id}")
                 return True
             
             return False

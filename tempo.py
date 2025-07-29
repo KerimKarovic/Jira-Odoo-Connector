@@ -23,13 +23,9 @@ headers = {
 def get_tempo_worklogs():
     """Fetch worklogs from Tempo API"""
     try:
-        print("🔍 Fetching worklogs from Tempo (ALL USERS)...")
-        
         # Calculate date range
         end_date = datetime.datetime.now()
         start_date = end_date - datetime.timedelta(hours=LOOKBACK_HOURS)
-        
-        print(f"📅 Pulling Tempo worklogs from: {start_date.strftime('%Y-%m-%d')} → {end_date.strftime('%Y-%m-%d')}")
         
         # Tempo API endpoint
         url = f"{TEMPO_BASE_URL}/worklogs"
@@ -51,15 +47,12 @@ def get_tempo_worklogs():
         data = response.json()
         worklogs = data.get('results', [])
         
-        print(f"✅ Retrieved {len(worklogs)} worklogs from Tempo API")
         return worklogs
         
     except requests.exceptions.RequestException as e:
-        print(f"❌ Tempo API error: {e}")
         email_notifier.collect_error(e, "Tempo API Request Failure", severity="critical")
         return []
     except Exception as e:
-        print(f"❌ Unexpected Tempo error: {e}")
         email_notifier.collect_error(e, "Tempo API Unexpected Error", severity="critical")
         return []
 
@@ -79,7 +72,6 @@ def enrich_worklogs_with_issue_key(worklog):
             return worklog
             
         if not issue_id:
-            print("⚠️ No issue ID found in worklog - skipping")
             return None
         
         # Fetch issue details from JIRA
@@ -90,33 +82,16 @@ def enrich_worklogs_with_issue_key(worklog):
         issue_data = response.json()
         issue_key = issue_data.get('key')
         
-        # Get author details
-        author = worklog.get('author', {})
-        author_account_id = author.get('accountId')
-        author_name = 'Unknown'
-        
-        if author_account_id:
-            # Fetch user details
-            user_url = f"{JIRA_URL}/rest/api/3/user"
-            user_params = {'accountId': author_account_id}
-            user_response = requests.get(user_url, headers=jira_headers, auth=auth, params=user_params)
-            if user_response.status_code == 200:
-                user_data = user_response.json()
-                author_name = user_data.get('displayName', 'Unknown')
-        
         # Enrich the worklog
         enriched_worklog = worklog.copy()
         enriched_worklog['issue']['key'] = issue_key
-        enriched_worklog['author']['displayName'] = author_name
         
         return enriched_worklog
         
     except requests.exceptions.RequestException as e:
-        print(f"❌ API error during worklog enrichment: {e}")
         email_notifier.collect_error(e, "JIRA API Failure during enrichment", severity="critical")
         return None
     except Exception as e:
-        print(f"⚠️ Skipped worklog due to enrichment error: {e}")
         return None
 
 

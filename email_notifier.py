@@ -49,7 +49,6 @@ class EmailNotifier:
     def send_sync_summary_email(self, sync_stats=None):
         """Send consolidated email with all errors from sync session"""
         if not self.is_configured() or not self.sync_errors:
-            print("✅ No errors to report - skipping email" if not self.sync_errors else "⚠️ Email not configured")
             return
         
         critical_count = sum(1 for e in self.sync_errors if e['severity'] == 'critical')
@@ -95,9 +94,7 @@ class EmailNotifier:
             f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         ])
         
-        if self.send_email(subject, "\n".join(body_parts)):
-            print(f"✅ Consolidated error email sent ({len(self.sync_errors)} errors)")
-        
+        self.send_email(subject, "\n".join(body_parts))
         self.sync_errors = []
     
     def send_critical_error_immediate(self, error, context=None, log_file_path=None):
@@ -140,7 +137,7 @@ class EmailNotifier:
                 ])
         
         if self.send_email(subject, "\n".join(body_parts)):
-            print("✅ Critical error email sent immediately (with full log)")
+            pass
     
     def send_email(self, subject, body):
         """Send email via SMTP"""
@@ -163,7 +160,6 @@ class EmailNotifier:
             
             return True
         except Exception as e:
-            print(f"❌ Failed to send email: {e}")
             return False
 
 # Global instance
@@ -196,13 +192,10 @@ def test_email_system():
         test_stats = {'created': 5, 'skipped': 2, 'errors': 2, 'duration': 45.67}
         email_notifier.send_sync_summary_email(test_stats)
         
-        print("✅ Email test completed")
         return True
     except Exception as e:
-        print(f"❌ Email test failed: {e}")
         return False
 
 if __name__ == "__main__":
     test_email_system()
-
 
