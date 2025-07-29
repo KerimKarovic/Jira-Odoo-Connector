@@ -60,17 +60,14 @@ class OdooClient:
         if not self.connect():
             return None
         
+        assert self.models is not None, "Models should be initialized after successful connection"
+        
         if work_date is None:
             work_date = date.today().strftime('%Y-%m-%d')
         
         try:
             # Get task/ticket details based on model type
             if model_type == 'helpdesk.ticket':
-                fields = ['name']
-                # For helpdesk tickets
-                if not self.models:
-                    return None
-                
                 task_data = self.models.execute_kw(
                     ODOO_DB, self.uid, ODOO_PASSWORD,
                     'helpdesk.ticket', 'read',
@@ -79,46 +76,10 @@ class OdooClient:
                 )
                 
                 if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-                    from email_notifier import email_notifier
                     task_error = Exception(f"Odoo {model_type} ID {task_id} not found")
                     email_notifier.collect_error(task_error, f"Odoo Task Not Found - {model_type} ID {task_id}", severity="normal")
                     return None
-                task_name = task_data[0].get('name', 'Unknown Ticket')
-            
                 
-            else:
-                fields = ['name', 'project_id']
-                # For project tasks (existing logic)
-                if not self.models:
-                    return None
-                
-                task_data = self.models.execute_kw(
-                    ODOO_DB, self.uid, ODOO_PASSWORD,
-                    'project.task', 'read',
-                    [[int(task_id)]],
-                    {'fields': ['name', 'project_id']}
-                )
-                
-                if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
-                    # DATA issue - task doesn't exist, collect error
-                    print(f"⚠️ Odoo {model_type} ID {task_id} not found - this indicates mapping issues")
-                    from email_notifier import email_notifier
-                    task_error = Exception(f"Odoo {model_type} ID {task_id} not found")
-                    email_notifier.collect_error(task_error, f"Odoo Task Not Found - {model_type} ID {task_id}", severity="normal")
-                    return None
-                    
-                task_name = task_data[0].get('name', 'Unknown Task')
-                project_id_field = task_data[0].get('project_id')
-                
-                # Handle project_id which can be False, int, or [id, name] tuple
-                project_id = None
-                if isinstance(project_id_field, list) and len(project_id_field) > 0:
-                    project_id = project_id_field[0]
-                elif isinstance(project_id_field, int):
-                    project_id = project_id_field
-            
-            # Worklog data - different structure for helpdesk vs project
-            if model_type == 'helpdesk.ticket':
                 # For helpdesk tickets, create timesheet entry linked to ticket
                 worklog_data = {
                     'helpdesk_ticket_id': int(task_id),
@@ -128,7 +89,29 @@ class OdooClient:
                     'employee_id': WEBDEV_TEAM_EMPLOYEE_ID,
                 }
             else:
-                # For project tasks (existing logic)
+                task_data = self.models.execute_kw(
+                    ODOO_DB, self.uid, ODOO_PASSWORD,
+                    'project.task', 'read',
+                    [[int(task_id)]],
+                    {'fields': ['name', 'project_id']}
+                )
+                
+                if not task_data or not isinstance(task_data, list) or len(task_data) == 0:
+                    print(f"⚠️ Odoo {model_type} ID {task_id} not found - this indicates mapping issues")
+                    task_error = Exception(f"Odoo {model_type} ID {task_id} not found")
+                    email_notifier.collect_error(task_error, f"Odoo Task Not Found - {model_type} ID {task_id}", severity="normal")
+                    return None
+                    
+                project_id_field = task_data[0].get('project_id')
+                
+                # Handle project_id which can be False, int, or [id, name] tuple
+                project_id = None
+                if isinstance(project_id_field, list) and len(project_id_field) > 0:
+                    project_id = project_id_field[0]
+                elif isinstance(project_id_field, int):
+                    project_id = project_id_field
+                
+                # For project tasks
                 worklog_data = {
                     'task_id': int(task_id),
                     'project_id': project_id,
@@ -152,18 +135,14 @@ class OdooClient:
             # Handle the result which should be an integer ID
             if isinstance(worklog_result, int):
                 worklog_id = worklog_result
-                model_name = "helpdesk ticket" if model_type == 'helpdesk.ticket' else "project task"
                 print(f"✅ Worklog created: #{worklog_id}")
                 return worklog_id
             else:
-                # DATA issue - unexpected return type, NO email
                 print(f"⚠️ Unexpected return type from Odoo worklog creation: {type(worklog_result)}")
                 return None
             
         except ConnectionError as e:
             print(f"❌ Connection error creating worklog for {model_type} ID={task_id}: {e}")
-            # CONNECTION failure - collect error
-            from email_notifier import email_notifier
             email_notifier.collect_error(e, f"Odoo connection error during timesheet creation", severity="critical")
             return None
         except Exception as e:
@@ -171,8 +150,6 @@ class OdooClient:
             # Check if it's a permission error
             error_msg = str(e).lower()
             if any(keyword in error_msg for keyword in ['permission', 'access', 'denied', 'forbidden']):
-                # Permission issue - collect error
-                from email_notifier import email_notifier
                 email_notifier.collect_error(e, f"Odoo permission error during timesheet creation", severity="normal")
             return None
 
@@ -181,11 +158,9 @@ class OdooClient:
         if not tempo_worklog_id or not self.connect():
             return False
         
+        assert self.models is not None, "Models should be initialized after successful connection"
+        
         try:
-            # Performance improvement: use search() instead of search_read()
-            if not self.models:
-                return False
-                
             existing_ids = self.models.execute_kw(
                 ODOO_DB, self.uid, ODOO_PASSWORD,
                 'account.analytic.line', 'search',

@@ -62,7 +62,6 @@ class EmailNotifier:
         severity_indicator = "🚨 CRITICAL" if critical_count > 0 else "⚠️"
         subject = f"{self.subject_prefix} {severity_indicator} Sync Errors - {quick_summary}"
         
-        # Build email body
         body_parts = [
             "🚨 CRITICAL ERRORS DETECTED" if critical_count > 0 else "⚠️ ERRORS DETECTED IN JIRA-ODOO SYNC",
             "",
@@ -108,7 +107,6 @@ class EmailNotifier:
         
         subject = f"{self.subject_prefix} 🚨 CRITICAL SYSTEM FAILURE"
         
-        # Build basic error info
         body_parts = [
             "🚨 CRITICAL SYSTEM FAILURE - SYNC CANNOT CONTINUE",
             "",
@@ -123,7 +121,6 @@ class EmailNotifier:
             "• Restart sync after resolving issues"
         ]
         
-        # Add full log content for critical errors
         if log_file_path and os.path.exists(log_file_path):
             try:
                 with open(log_file_path, 'r', encoding='utf-8') as f:
@@ -168,6 +165,7 @@ class EmailNotifier:
         except Exception as e:
             print(f"❌ Failed to send email: {e}")
             return False
+
 # Global instance
 email_notifier = EmailNotifier()
 
@@ -206,4 +204,5 @@ def test_email_system():
 
 if __name__ == "__main__":
     test_email_system()
+
 

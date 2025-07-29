@@ -28,7 +28,6 @@ def sync_tempo_worklogs_to_odoo(worklog):
     tempo_worklog_id = worklog.get('tempoWorklogId')
     issue = worklog.get('issue', {})
     
-    # Handle case where issue is None
     if issue is None:
         issue = {}
     
@@ -37,24 +36,20 @@ def sync_tempo_worklogs_to_odoo(worklog):
     try:
         logging.info(f"Processing worklog: JIRA {jira_key}, Tempo ID: {tempo_worklog_id}")
         
-        # Skip duplicates
         if tempo_worklog_id and check_existing_worklogs_by_worklog_id(tempo_worklog_id):
             logging.warning(f"SKIPPED: Duplicate worklog - Tempo ID {tempo_worklog_id}")
             return False
         
-        # Get issue with Odoo URL
         issue_data = get_issue_with_odoo_url(jira_key)
         if not issue_data or not issue_data.get('odoo_url'):
             logging.warning(f"SKIPPED: No Odoo URL found for {jira_key}")
             return False
         
-        # Extract Odoo task details
         odoo_task_id, model = extract_odoo_task_id_from_url(issue_data['odoo_url'])
         if not odoo_task_id:
             logging.warning(f"SKIPPED: Could not extract task ID from Odoo URL for {jira_key}")
             return False
         
-        # Convert time and create timesheet
         time_seconds = worklog.get('timeSpentSeconds', 0)
         hours = convert_seconds_to_hours(time_seconds)
         
@@ -86,7 +81,6 @@ def sync_tempo_worklogs_to_odoo(worklog):
 def main():
     """Main synchronization function"""
     with SyncSession():
-        # Fetch and enrich worklogs
         tempo_worklogs = get_tempo_worklogs()
         logging.info(f"Fetched {len(tempo_worklogs)} worklogs from Tempo")
         
@@ -98,7 +92,6 @@ def main():
         
         logging.info(f"Enriched {len(enriched_worklogs)} worklogs with JIRA data")
         
-        # Process worklogs
         sync_count = skip_count = error_count = 0
         
         for worklog in enriched_worklogs:
@@ -109,12 +102,11 @@ def main():
         
         logging.info(f"Sync completed: {sync_count} created, {skip_count} skipped, {error_count} errors")
         
-        # Send consolidated email with sync stats
         sync_stats = {
             'created': sync_count,
             'skipped': skip_count, 
             'errors': error_count,
-            'duration': 0  # Will be calculated in __exit__
+            'duration': 0
         }
         email_notifier.send_sync_summary_email(sync_stats)
 
@@ -122,10 +114,8 @@ def test_connections():
     """Test connections to all external services"""
     print("🔧 Testing connections...")
     
-    # Test Odoo
     test_odoo_connection()
     
-    # Test Tempo
     worklogs = get_tempo_worklogs()
     if worklogs is not None:
         print(f"✅ Tempo connection successful ({len(worklogs)} worklogs retrieved)")

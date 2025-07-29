@@ -44,8 +44,6 @@ def validate_config():
     if missing:
         raise EnvironmentError(f"Missing environment variables: {', '.join(missing)}")
 
-
-
 # Validate configuration on import
 validate_config()
 
@@ -60,10 +58,8 @@ class SyncSession:
         timestamp = self.start_time.strftime("%Y%m%d_%H%M%S")
         self.log_file = f"logs/sync_{timestamp}.log"
         
-        # Setup logging once
         self.setup_session_logging()
         
-        # Start email session
         from email_notifier import email_notifier
         email_notifier.start_sync_session()
         
@@ -75,31 +71,27 @@ class SyncSession:
         from email_notifier import email_notifier
         
         if exc_type:
-            # Critical error occurred - include full log
             logging.error(f"CRITICAL: Sync session failed: {exc_val}")
             email_notifier.send_critical_error_immediate(
                 exc_val, 
                 "Sync session failure", 
-                log_file_path=self.log_file  # Pass log file path
+                log_file_path=self.log_file
             )
         else:
-            # Normal completion
             duration = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
             logging.info(f"=== SYNC SESSION COMPLETED in {duration:.2f} seconds ===")
         
-        return False  # Don't suppress exceptions
+        return False
     
     def setup_session_logging(self):
         """Setup logging for this session only"""
         if not os.path.exists("logs"):
             os.makedirs("logs")
         
-        # Ensure log_file is set
         if not self.log_file:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             self.log_file = f"logs/sync_{timestamp}.log"
         
-        # Clear existing handlers
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
         
