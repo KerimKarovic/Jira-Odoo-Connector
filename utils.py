@@ -44,30 +44,7 @@ def validate_config():
     if missing:
         raise EnvironmentError(f"Missing environment variables: {', '.join(missing)}")
 
-def setup_logging(log_file=None):
-    """Configure logging for the application"""
-    # Create logs directory
-    if not os.path.exists("logs"):
-        os.makedirs("logs")
-    
-    # Clear existing handlers to prevent conflicts
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
-    
-    # Use provided log file or generate default
-    if not log_file:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_file = f"logs/sync_{timestamp}.log"
-    
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file, encoding='utf-8'),
-            logging.StreamHandler()
-        ],
-        force=True  # Force reconfiguration
-    )
+
 
 # Validate configuration on import
 validate_config()
