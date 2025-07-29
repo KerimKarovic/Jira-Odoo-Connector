@@ -147,4 +147,5 @@ EMAIL_TO=admin@yourcompany.com
 EMAIL_SUBJECT_PREFIX=[JIRA-SYNC]
 ```
 
-**Note**: For Gmail, use an App Password instead of your regular password.
+**Note**: For Gmail, use an App Password instead of your regular password.⏱️ Jira-Odoo Timesheet Sync (via Tempo)
+
