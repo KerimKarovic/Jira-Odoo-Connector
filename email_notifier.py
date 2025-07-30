@@ -6,6 +6,9 @@ import os
 import smtplib
 from datetime import datetime
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 from functools import wraps
 
 class EmailNotifier:
@@ -46,20 +49,13 @@ class EmailNotifier:
         })
         print(f"📧 Error collected: {type(error).__name__} ({len(self.sync_errors)} total)")
     
-    def send_sync_summary_email(self, sync_stats=None):
+    def send_sync_summary_email(self, sync_stats=None, log_file_path=None):
         """Send consolidated email with all errors from sync session"""
         if not self.is_configured() or not self.sync_errors:
             return
         
         critical_count = sum(1 for e in self.sync_errors if e['severity'] == 'critical')
-        error_types = {}
-        for error in self.sync_errors:
-            error_type = error['error_type']
-            error_types[error_type] = error_types.get(error_type, 0) + 1
-        
-        quick_summary = ", ".join([f"{count} {error_type}" for error_type, count in error_types.items()])
-        severity_indicator = "🚨 CRITICAL" if critical_count > 0 else "⚠️"
-        subject = f"{self.subject_prefix} {severity_indicator} Sync Errors - {quick_summary}"
+        subject = f"{self.subject_prefix} 🚨 CRITICAL ERRORS DETECTED" if critical_count > 0 else f"{self.subject_prefix} ⚠️ ERRORS DETECTED"
         
         body_parts = [
             "🚨 CRITICAL ERRORS DETECTED" if critical_count > 0 else "⚠️ ERRORS DETECTED IN JIRA-ODOO SYNC",
@@ -73,28 +69,16 @@ class EmailNotifier:
             body_parts.extend([
                 f"• Created: {sync_stats.get('created', 0)}",
                 f"• Skipped: {sync_stats.get('skipped', 0)}",
-                f"• Duration: {sync_stats.get('duration', 0):.1f}s"
-            ])
-        
-        body_parts.extend(["", "ERROR DETAILS:"])
-        
-        for i, error in enumerate(self.sync_errors, 1):
-            severity_icon = "🚨" if error['severity'] == 'critical' else "⚠️"
-            body_parts.extend([
-                f"{i}. {severity_icon} {error['error_type']}",
-                f"   Time: {error['timestamp']}",
-                f"   Context: {error['context']}",
-                f"   Message: {error['error_message']}",
-                ""
             ])
         
         body_parts.extend([
+            "",
             "RECOMMENDED ACTIONS:",
             "• Check API credentials and connectivity" if critical_count > 0 else "• Review JIRA-Odoo URL mappings",
             f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         ])
         
-        self.send_email(subject, "\n".join(body_parts))
+        self.send_email_with_attachment(subject, "\n".join(body_parts), log_file_path)
         self.sync_errors = []
     
     def send_critical_error_immediate(self, error, context=None, log_file_path=None):
@@ -162,6 +146,46 @@ class EmailNotifier:
         except Exception as e:
             return False
 
+    def send_email_with_attachment(self, subject, body, attachment_path=None):
+        """Send email with optional attachment"""
+        try:
+            if not self.is_configured():
+                raise ValueError("Email credentials not configured")
+            
+            # Create multipart message
+            msg = MIMEMultipart()
+            msg['From'] = self.from_email or ""
+            msg['To'] = self.to_email or ""
+            msg['Subject'] = subject
+            
+            # Add body
+            msg.attach(MIMEText(body, 'plain', 'utf-8'))
+            
+            # Add attachment if provided
+            if attachment_path and os.path.exists(attachment_path):
+                with open(attachment_path, 'rb') as attachment:
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(attachment.read())
+                
+                encoders.encode_base64(part)
+                part.add_header(
+                    'Content-Disposition',
+                    f'attachment; filename= {os.path.basename(attachment_path)}'
+                )
+                msg.attach(part)
+            
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls()
+                if not self.from_email or not self.password:
+                    raise ValueError("Email credentials (from_email and password) are required")
+                
+                server.login(self.from_email, self.password)
+                server.send_message(msg)
+            
+            return True
+        except Exception as e:
+            return False
+
 # Global instance
 email_notifier = EmailNotifier()
 
@@ -198,4 +222,9 @@ def test_email_system():
 
 if __name__ == "__main__":
     test_email_system()
+
+
+
+
+
 

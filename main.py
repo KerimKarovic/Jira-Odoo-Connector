@@ -9,7 +9,7 @@ import sys
 import logging
 import math
 from datetime import datetime
-from utils import SyncSession
+from utils import SyncSession, config
 from tempo import get_tempo_worklogs, enrich_worklogs_with_issue_key
 from jira import get_issue_with_odoo_url, extract_odoo_task_id_from_url
 from odoo import create_timesheet_entry, check_existing_worklogs_by_worklog_id, test_odoo_connection
@@ -65,7 +65,9 @@ def sync_tempo_worklogs_to_odoo(worklog):
         )
         
         if worklog_id:
-            logging.info(f"SUCCESS: Created timesheet ID {worklog_id} for {jira_key}")
+            odoo_base_url = config["odoo"]["url"].rstrip('/')
+            odoo_task_url = f"{odoo_base_url}/web#id={odoo_task_id}&model={model or 'project.task'}&view_type=form"
+            logging.info(f"SUCCESS: Created timesheet ID {worklog_id} for {jira_key} - Odoo Task: {odoo_task_url}")
             return True
         else:
             logging.warning(f"SKIPPED: Failed to create timesheet for {jira_key}")
@@ -104,10 +106,10 @@ def main():
         sync_stats = {
             'created': sync_count,
             'skipped': skip_count, 
-            'errors': error_count,
-            'duration': 0
+            'errors': error_count
         }
-        email_notifier.send_sync_summary_email(sync_stats)
+        email_notifier.send_sync_summary_email(sync_stats, 
+                                               getattr(logging.getLogger().handlers[0], 'baseFilename', None))
 
 def test_connections():
     """Test connections to all external services"""
