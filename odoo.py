@@ -143,7 +143,9 @@ class OdooClient:
             # Check if it's a permission error
             error_msg = str(e).lower()
             if any(keyword in error_msg for keyword in ['permission', 'access', 'denied', 'forbidden']):
-                email_notifier.collect_error(e, f"Odoo permission error during timesheet creation", severity="normal")
+                email_notifier.collect_error(e, f"Odoo permission error during timesheet creation", severity="critical")
+            else:
+                email_notifier.collect_error(e, f"Odoo error during timesheet creation", severity="critical")
             return None
 
     def check_existing_worklogs_by_worklog_id(self, tempo_worklog_id: Optional[str]) -> bool:
