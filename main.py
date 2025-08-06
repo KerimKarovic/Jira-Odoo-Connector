@@ -37,12 +37,12 @@ def sync_tempo_worklogs_to_odoo(worklog):
         logging.info(f"Processing worklog: JIRA {jira_key}, Tempo ID: {tempo_worklog_id}")
         
         if tempo_worklog_id and check_existing_worklogs_by_worklog_id(tempo_worklog_id):
-            logging.warning(f"SKIPPED: Duplicate worklog - Tempo ID {tempo_worklog_id}")
+            logging.info(f"SKIPPED: Duplicate worklog - Tempo ID {tempo_worklog_id}")
             return False
         
         issue_data = get_issue_with_odoo_url(jira_key)
         if not issue_data or not issue_data.get('odoo_url'):
-            logging.warning(f"SKIPPED: No Odoo URL found for {jira_key}")
+            logging.info(f"SKIPPED: No Odoo URL found for {jira_key}")
             return False
         
         odoo_task_id, model = extract_odoo_task_id_from_url(issue_data['odoo_url'])
@@ -70,7 +70,7 @@ def sync_tempo_worklogs_to_odoo(worklog):
             logging.info(f"SUCCESS: Created timesheet ID {worklog_id} for {jira_key} - Odoo Task: {odoo_task_url}")
             return True
         else:
-            logging.warning(f"SKIPPED: Failed to create timesheet for {jira_key}")
+            logging.error(f"SKIPPED: Failed to create timesheet for {jira_key}")
             return False
             
     except Exception as e:

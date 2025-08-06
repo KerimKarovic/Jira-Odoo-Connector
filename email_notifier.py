@@ -51,8 +51,17 @@ class EmailNotifier:
     
     def send_sync_summary_email(self, sync_stats=None, log_file_path=None):
         """Send consolidated email with all errors from sync session"""
-        if not self.is_configured() or not self.sync_errors:
+        print(f"📧 Email check: configured={self.is_configured()}, errors={len(self.sync_errors)}")
+        
+        if not self.is_configured():
+            print("📧 Email not configured - skipping")
             return
+        
+        if not self.sync_errors:
+            print("📧 No errors collected - skipping email")
+            return
+        
+        print(f"📧 Sending email for {len(self.sync_errors)} errors")
         
         critical_count = sum(1 for e in self.sync_errors if e['severity'] == 'critical')
         subject = f"{self.subject_prefix} 🚨 CRITICAL ERRORS DETECTED" if critical_count > 0 else f"{self.subject_prefix} ⚠️ ERRORS DETECTED"
@@ -119,9 +128,11 @@ class EmailNotifier:
                     "",
                     f"⚠️ Could not read log file: {e}"
                 ])
-        
+
         if self.send_email(subject, "\n".join(body_parts)):
-            pass
+            print("📧 ✅ Critical email sent successfully")
+        else:
+            print("📧 ❌ Critical email failed to send")
     
     def send_email(self, subject, body):
         """Send email via SMTP"""
@@ -182,8 +193,10 @@ class EmailNotifier:
                 server.login(self.from_email, self.password)
                 server.send_message(msg)
             
+            print("📧 ✅ Email sent successfully")
             return True
         except Exception as e:
+            print(f"📧 ❌ Email failed: {e}")
             return False
 
 # Global instance
