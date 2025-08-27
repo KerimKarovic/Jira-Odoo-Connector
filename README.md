@@ -115,7 +115,7 @@ sudo crontab -e
 ```
 Add this line for 2 AM daily execution:
 ```bash
-0 2 * * * cd /path/to/jira-odoo-connector && /usr/bin/docker-compose run --rm jira-odoo-connector
+0 2 * * * cd /path/to/jira-odoo-connector && docker-compose run --rm jira-odoo-sync
 ```
 
 🧪 Running Tests
