@@ -42,12 +42,16 @@ def sync_tempo_worklogs_to_odoo(worklog):
         
         issue_data = get_issue_with_odoo_url(jira_key)
         if not issue_data or not issue_data.get('odoo_url'):
-            logging.info(f"SKIPPED: No Odoo URL found for {jira_key}")
+            logging.warning(f"SKIPPED: No Odoo URL found for {jira_key}")
+            missing_url_error = Exception(f"SKIPPED: No Odoo URL found for JIRA issue {jira_key}")
+            email_notifier.collect_error(missing_url_error, f"Missing Odoo URL mapping for {jira_key}", severity="warning")
             return False
         
         odoo_task_id, model = extract_odoo_task_id_from_url(issue_data['odoo_url'])
         if not odoo_task_id:
-            logging.warning(f"SKIPPED: Could not extract task ID from Odoo URL for {jira_key}")
+            logging.error(f"SKIPPED: Could not extract task ID from Odoo URL for {jira_key}")
+            invalid_url_error = Exception(f"SKIPPED: Could not extract task ID from Odoo URL for {jira_key}")
+            email_notifier.collect_error(invalid_url_error, f"Invalid Odoo URL format for {jira_key}", severity="critical")
             return False
         
         time_seconds = worklog.get('timeSpentSeconds', 0)
