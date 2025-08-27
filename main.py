@@ -62,7 +62,7 @@ def sync_tempo_worklogs_to_odoo(worklog):
         worklog_id = create_timesheet_entry(
             odoo_task_id, 
             hours, 
-            issue_data.get('summary', f'Work on {jira_key}'),
+            f'Arbeit an Aufgabe: {issue_data.get('summary', f'{jira_key}')}',
             worklog.get('startDate'), 
             tempo_worklog_id, 
             model or 'project.task'
