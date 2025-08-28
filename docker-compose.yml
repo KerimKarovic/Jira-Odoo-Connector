@@ -7,6 +7,6 @@ services:
     env_file: .env
     volumes:
       - ./logs:/app/logs
-    restart: no
+    restart: "no"
     # Default command for one-time execution
     command: python cron_sync.py
