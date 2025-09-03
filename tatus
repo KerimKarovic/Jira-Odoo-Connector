@@ -1,0 +1,5 @@
+[33ma868b8a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/develop[m[33m, [m[1;31morigin/HEAD[m[33m)[m fixed docker compose restart parameter
+[33m1d15d43[m Added prefix to all Odoo timesheet descriptions
+[33m93e2559[m fix: cron job snippet with correct service name and docker compose path
+[33md49eddc[m Add email notifications for missing Odoo URL mappings in JIRA issues
+[33ma99043b[m Email-E-Mail-Verwaltung

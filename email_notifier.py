@@ -10,6 +10,11 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 from functools import wraps
+from dotenv import load_dotenv
+
+
+
+load_dotenv()
 
 class EmailNotifier:
     def __init__(self):
@@ -40,14 +45,18 @@ class EmailNotifier:
         if not self.is_configured():
             return
             
-        self.sync_errors.append({
+        error_info = {
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'error_type': type(error).__name__,
             'error_message': str(error),
             'context': context or 'None',
             'severity': severity
-        })
-        print(f"📧 Error collected: {type(error).__name__} ({len(self.sync_errors)} total)")
+        }
+        
+        self.sync_errors.append(error_info)
+        
+        # Add logging to see what error is being collected
+        print(f"📧 Error collected: {error_info['error_type']} - {error_info['error_message']} ({len(self.sync_errors)} total)")
     
     def send_sync_summary_email(self, sync_stats=None, log_file_path=None):
         """Send consolidated email with all errors from sync session"""

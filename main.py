@@ -59,13 +59,20 @@ def sync_tempo_worklogs_to_odoo(worklog):
         
         logging.info(f"Creating timesheet: {hours}h for {model} ID {odoo_task_id}")
         
+        # Extract Jira author from worklog
+        jira_author = (
+            worklog.get('author')
+            or (worklog.get('issue', {}).get('fields', {}).get('assignee') if worklog.get('issue') else None)
+        )
+        
         worklog_id = create_timesheet_entry(
             odoo_task_id, 
             hours, 
-            f'Arbeit an Aufgabe: {issue_data.get('summary', f'{jira_key}')}',
+            f"Arbeit an Aufgabe: {issue_data.get('summary', jira_key)}",
             worklog.get('startDate'), 
             tempo_worklog_id, 
-            model or 'project.task'
+            model or 'project.task',
+            jira_author=jira_author
         )
         
         if worklog_id:
@@ -113,7 +120,7 @@ def main():
             'errors': error_count
         }
         email_notifier.send_sync_summary_email(sync_stats, 
-                                               getattr(logging.getLogger().handlers[0], 'baseFilename', None))
+                                            getattr(logging.getLogger().handlers[0], 'baseFilename', None))
 
 def test_connections():
     """Test connections to all external services"""
